@@ -89,6 +89,9 @@ Token Tokenizer_State::read_next() {
                     read_cursor++;
                 }
                 read_cursor++; // skip quote
+                // keep the original string for useful things
+                // like transpiling where the escaped string means absolutely
+                // nothing.
                 string_token.string = source.substr(string_start, read_cursor-start_of_token);
                 return string_token;
             } break;
