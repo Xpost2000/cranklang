@@ -1,0 +1,18 @@
+/*
+     Crank hello
+
+     it kind of just compiles into a rip off C
+*/
+
+
+// Should be okay for function pointers as well.
+main : int(argc: int, argv: string[]) { 
+     printf("Hello World!\n");
+
+     // I don't really want postincrement or preincrement either...
+     for i := 0, i < argc, argc += 1 {
+         printf("%d no object support yet! So here's some stuff\n", argc);
+     }
+
+     return argc;
+}

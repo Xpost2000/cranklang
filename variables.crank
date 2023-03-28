@@ -1,0 +1,37 @@
+// Testing file
+
+// NOTE: Crank is a toy language just for me
+// to actually practice parsing and language stuff
+// do not use for anything real unless it's transpiled? Even
+// then probably don't
+
+/*
+   a few forms
+*/
+
+// need to figure out how to handle
+// properties?
+
+typedef VectorInt : {
+           x : int;
+           y : int;
+           z : int;
+}
+/*
+Default initializers?
+typedef VectorInt : {
+           x : int = 9;
+           y : int = 92;
+           z : int = 4;
+}
+*/
+
+// typedef v2i : VectorInt;
+
+// asdf : VectorInt = VectorInt { 4, 5, 6 };
+// asdf2 : VectorInt = { x: 4, y: 5, z: 8 };
+
+i  : int; // Declaration (uninit)
+i2 : int = 56;
+i4 : strlit = "Hello Literal!"; // Initialization
+i5 : float = 4.5; // Initialization (only float)
