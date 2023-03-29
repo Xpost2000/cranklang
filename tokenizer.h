@@ -8,12 +8,19 @@
 
 #define unwrap_string_view(x) x.length(), x.data()
 
+/*
+  Technically it's more useful to have tokens
+  in a more granular unit, but this language is kind
+  of simple so some tokens are multiple characters
+*/
 enum Token_Type {
     TOKEN_NONE,
     TOKEN_SYMBOL, // TODO: need table.
+    // NOTE: should parse different literal types
+    //   BINARY, OCTAL, HEX
     TOKEN_NUMBERINT, // for simplicity I'm only using 32bit numbers cause this is a hack project I guess
     TOKEN_NUMBERFLOAT, // for simplicity I'm only using 32bit numbers cause this is a hack project I guess
-    TOKEN_STRING, // TODO: need table.
+    TOKEN_STRING, // TODO: need intern table.
     TOKEN_CHARACTER,
 
     TOKEN_COMMENT, /* Store comments just in case. */
@@ -48,6 +55,7 @@ enum Token_Type {
     TOKEN_MUL, // *
     TOKEN_DIV, // /
     TOKEN_MOD, // %
+    // NOTE: add exponent or abs? just for fun? It is just a toy language.
 
     /* boolean operators*/
     TOKEN_EQUALITY, // ==
@@ -59,6 +67,13 @@ enum Token_Type {
     TOKEN_GT, // >
     TOKEN_LTE, // <=
     TOKEN_GTE, // >=
+
+    /* bitwise operators */
+    /* NOTE: do not have compound assignment operators for these */
+    TOKEN_BITAND, // &
+    TOKEN_BITOR,  // |
+    TOKEN_BITNOT, // ~
+    TOKEN_BITXOR, // ^
 
     TOKEN_COUNT,
 };

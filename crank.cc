@@ -387,6 +387,11 @@ enum Crank_Expression_Operator {
     // that's about it.
     OPERATOR_AND,
     OPERATOR_OR,
+
+    OPERATOR_BITAND,
+    OPERATOR_BITOR,
+    OPERATOR_BITXOR,
+    OPERATOR_BITNOT,
 };
 
 const char* Crank_Expression_Operator_string_table[] = {
@@ -418,6 +423,11 @@ const char* Crank_Expression_Operator_string_table[] = {
 
     "(and)",
     "(or)",
+
+    "(bit-and)",
+    "(bit-or)",
+    "(bit-xor)",
+    "(bit-not)",
 
     "(count)"
 };
@@ -470,6 +480,12 @@ int token_to_operation(Token t) {
 
         case TOKEN_LTE: return OPERATOR_LTE;
         case TOKEN_GTE: return OPERATOR_GTE;
+
+        case TOKEN_BITAND: return OPERATOR_BITAND;
+        case TOKEN_BITOR:  return OPERATOR_BITOR;
+        case TOKEN_BITXOR: return OPERATOR_BITXOR;
+        case TOKEN_BITNOT: return OPERATOR_BITNOT;
+
         default: {
             assert(0 && "Invalid token type.");
             return -1;
@@ -589,7 +605,7 @@ Crank_Expression* parse_property_accessor(Tokenizer_State& tokenizer) {
 
 Crank_Expression* parse_unary(Tokenizer_State& tokenizer) {
     auto peek_next = tokenizer.peek_next();
-    if (peek_next.type == TOKEN_NOT || peek_next.type == TOKEN_SUB) {
+    if (peek_next.type == TOKEN_NOT || peek_next.type == TOKEN_SUB || peek_next.type == TOKEN_BITNOT) {
         printf("Unary found!\n");
         auto next = tokenizer.read_next(); 
         int operation = token_to_operation(next);
@@ -611,10 +627,13 @@ Crank_Expression* parse_factor(Tokenizer_State& tokenizer) {
     Crank_Expression* result = parse_unary(tokenizer);
 
     while (
-        tokenizer.peek_next().type == TOKEN_MUL ||
-        tokenizer.peek_next().type == TOKEN_DIV ||
-        tokenizer.peek_next().type == TOKEN_MOD ||
-        tokenizer.peek_next().type == TOKEN_AND
+        tokenizer.peek_next().type == TOKEN_MUL   ||
+        tokenizer.peek_next().type == TOKEN_DIV   ||
+        tokenizer.peek_next().type == TOKEN_MOD   ||
+        tokenizer.peek_next().type == TOKEN_AND   ||
+        tokenizer.peek_next().type == TOKEN_BITAND ||
+        // TODO: I don't think this respects C operator order
+        tokenizer.peek_next().type == TOKEN_BITXOR
     ) {
         auto operator_token = tokenizer.read_next();
         int operation = token_to_operation(operator_token);
@@ -630,9 +649,10 @@ Crank_Expression* parse_term(Tokenizer_State& tokenizer) {
     Crank_Expression* result = parse_factor(tokenizer);
 
     while (
-        tokenizer.peek_next().type == TOKEN_ADD ||
-        tokenizer.peek_next().type == TOKEN_SUB ||
-        tokenizer.peek_next().type == TOKEN_OR
+        tokenizer.peek_next().type == TOKEN_ADD   ||
+        tokenizer.peek_next().type == TOKEN_SUB   ||
+        tokenizer.peek_next().type == TOKEN_OR    ||
+        tokenizer.peek_next().type == TOKEN_BITOR
     ) {
         auto operator_token = tokenizer.read_next();
         int operation = token_to_operation(operator_token);
@@ -1089,7 +1109,8 @@ int main(int argc, char** argv){
     // I wish I had a proper test suite for these cases
     // but building my own tree is a little annoying.
     // TODO
-    char* test_parse = "A && B || B && D";
+    // char* test_parse = "A && B || B && D";
+    char* test_parse = "A & B | B & D ^ 1234";
     // char* test_parse = "test[1 + 2]";
     // char* test_parse = "test[0]";
     // char* test_parse = "0";

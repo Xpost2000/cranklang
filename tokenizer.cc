@@ -291,6 +291,22 @@ Token Tokenizer_State::read_next() {
                 result.string     = source.substr(start_of_token, read_cursor-start_of_token);
                 return result;
             } break;
+            case '^': {
+                Token result      = {};
+                result.type       = TOKEN_BITXOR;
+                result.col_found  = read_cursor;
+                result.line_found = line;
+                result.string     = source.substr(start_of_token, read_cursor-start_of_token);
+                return result;
+            } break;
+            case '~': {
+                Token result      = {};
+                result.type       = TOKEN_BITNOT;
+                result.col_found  = read_cursor;
+                result.line_found = line;
+                result.string     = source.substr(start_of_token, read_cursor-start_of_token);
+                return result;
+            } break;
             case '=': {
                 Token result      = {};
                 result.type       = TOKEN_EQUAL;
@@ -313,6 +329,13 @@ Token Tokenizer_State::read_next() {
                     result.line_found = line;
                     result.string     = source.substr(start_of_token, read_cursor-start_of_token);
                     return result;
+                } else {
+                    Token result      = {};
+                    result.type       = TOKEN_BITAND;
+                    result.col_found  = read_cursor;
+                    result.line_found = line;
+                    result.string     = source.substr(start_of_token, read_cursor-start_of_token);
+                    return result;
                 }
                 assert(!"Error cannot parse!");
                 return {};
@@ -322,6 +345,13 @@ Token Tokenizer_State::read_next() {
                     next_character();
                     Token result      = {};
                     result.type       = TOKEN_OR;
+                    result.col_found  = read_cursor;
+                    result.line_found = line;
+                    result.string     = source.substr(start_of_token, read_cursor-start_of_token);
+                    return result;
+                } else {
+                    Token result      = {};
+                    result.type       = TOKEN_BITOR;
                     result.col_found  = read_cursor;
                     result.line_found = line;
                     result.string     = source.substr(start_of_token, read_cursor-start_of_token);
