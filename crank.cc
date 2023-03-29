@@ -1,10 +1,17 @@
 /*
   A small programming language interpreter/transpiler
 
+  3/29/2023:
+  NOTE: A lot of thing in the "compiler" are not
+  typechecked as of now! I am checking these functional changes
+  in but invalid types are still allowed
+  - Function decls will definitely not be typechecked yet
+  - Typedecls are mostly okay
+  - Expressions are not properly type checked!
+  - Basic to C++ compiler (just compile types in I suppose)
+
   NOTE: have to refactor like all of this later...
   because it's not object oriented.
-
-  Expressions are not typechecked properly.
 
   Code is kind of messy because it's a "hack" project.
 
@@ -354,6 +361,7 @@ enum Crank_Expression_Type {
 enum Crank_Expression_Operator {
     OPERATOR_NOT, // unary
     OPERATOR_NEGATE,
+    OPERATOR_PROPERTY_ACCESS, // NOTE: not unary but!
 
     // binary...
     OPERATOR_ADD,
@@ -385,6 +393,7 @@ enum Crank_Expression_Operator {
 const char* Crank_Expression_Operator_string_table[] = {
     "(not)",
     "(negate)",
+    "(property-access)",
 
     "(add)",
     "(sub)",
@@ -440,6 +449,7 @@ int token_to_operation(Token t) {
         case TOKEN_MUL: return OPERATOR_MUL;
         case TOKEN_DIV: return OPERATOR_DIV;
         case TOKEN_MOD: return OPERATOR_MOD;
+        case TOKEN_DOT: return OPERATOR_PROPERTY_ACCESS;
 
         case TOKEN_EQUAL:    return OPERATOR_EQUAL;
         case TOKEN_ADDEQUAL: return OPERATOR_ADDEQUAL;
@@ -514,6 +524,9 @@ Crank_Expression* parse_term(Tokenizer_State& tokenizer);
 Crank_Expression* parse_factor(Tokenizer_State& tokenizer);
 // - or !
 Crank_Expression* parse_unary(Tokenizer_State& tokenizer);
+
+// dot syntax
+Crank_Expression* parse_property_accessor(Tokenizer_State& tokenizer);
 Crank_Expression* parse_value(Tokenizer_State& tokenizer);
 
 Crank_Expression* parse_value(Tokenizer_State& tokenizer) {
@@ -530,6 +543,19 @@ Crank_Expression* parse_value(Tokenizer_State& tokenizer) {
     }
 }
 
+Crank_Expression* parse_property_accessor(Tokenizer_State& tokenizer) {
+    auto base_accessor = parse_value(tokenizer);
+
+    if (tokenizer.peek_next().type == TOKEN_DOT) {
+        // accessor!
+        // this will just be recursive.
+        tokenizer.read_next(); // skip dot
+        return binary_expression(base_accessor, parse_property_accessor(tokenizer), OPERATOR_PROPERTY_ACCESS);
+    }
+
+    return base_accessor;
+}
+
 Crank_Expression* parse_unary(Tokenizer_State& tokenizer) {
     auto peek_next = tokenizer.peek_next();
     if (peek_next.type == TOKEN_NOT || peek_next.type == TOKEN_SUB) {
@@ -543,10 +569,10 @@ Crank_Expression* parse_unary(Tokenizer_State& tokenizer) {
         }
 
         assert(operation != -1 && "something went wrong here.");
-        return unary_expression(parse_value(tokenizer), operation);
+        return unary_expression(parse_property_accessor(tokenizer), operation);
     }
 
-    return parse_value(tokenizer);
+    return parse_property_accessor(tokenizer);
 }
 
 Crank_Expression* parse_factor(Tokenizer_State& tokenizer) {
@@ -686,10 +712,12 @@ void _debug_print_expression_tree(Crank_Expression* root) {
             printf(") ");
         } break;
         case EXPRESSION_BINARY: {
-            if (root->binary.first)
             printf("(%s ", Crank_Expression_Operator_string_table[root->operation]);
+            if (root->binary.first)
             _debug_print_expression_tree(root->binary.first);
+            else printf("[nil first] ");
             if (root->binary.second) _debug_print_expression_tree(root->binary.second);
+            else printf("[nil second] ");
             printf(") ");
         } break;
     }
@@ -697,7 +725,7 @@ void _debug_print_expression_tree(Crank_Expression* root) {
 
 Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
     auto first = tokenizer.read_next();
-    Crank_Value value;
+    Crank_Value value = {};
     value.value_type = VALUE_TYPE_LITERAL;
 
     switch(first.type) {
@@ -740,6 +768,7 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
                 // symbol
                 value.symbol_name = first.string;
                 if (next.type == TOKEN_LEFT_PARENTHESIS) {
+                    printf("Possible function call\n");
                     tokenizer.read_next(); 
 
                     value.is_function_call = true;
@@ -1011,7 +1040,15 @@ int main(int argc, char** argv){
 
     // Tokenizer_State tokenizer("2 == (4 != 5)");
     // char* test_parse = "3 * ([1, 2, 3] + [4, 5, 7])";
-    char* test_parse = "test_function() * 5 + test_function4(4, 4, 6)";
+    // char* test_parse = "test_function() * 5 + test_function4(4, 4, 6)";
+
+    // NOTE: type checking expressions like this are
+    // a bit harder. Since we can possibly be accessing
+    // properties. Some types will need built in properties
+    // and will be handled accordingly...
+    
+    char* test_parse = "test.x + hello.y";
+    // char* test_parse = "test.x";
     printf("Parsing: %s\n", test_parse);
     Tokenizer_State tokenizer(test_parse);
     auto t = parse_expression(tokenizer);
