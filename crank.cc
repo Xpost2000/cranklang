@@ -532,6 +532,10 @@ Crank_Expression* parse_array_index(Tokenizer_State& tokenizer);
 Crank_Expression* parse_value(Tokenizer_State& tokenizer);
 
 Crank_Expression* parse_value(Tokenizer_State& tokenizer) {
+    // NOTE:
+    // parethentical groupings are not stored in the tree
+    // which makes it impossible to issue warnings about them right
+    // now.
     if (tokenizer.peek_next().type == TOKEN_LEFT_PARENTHESIS) {
         tokenizer.read_next();
         auto expression = parse_expression(tokenizer);
@@ -547,7 +551,7 @@ Crank_Expression* parse_value(Tokenizer_State& tokenizer) {
 
 Crank_Expression* parse_array_index(Tokenizer_State& tokenizer) {
     Crank_Expression* index_expression = nullptr;
-    auto              base_accessor    = parse_property_accessor(tokenizer);
+    auto              base_accessor    = parse_value(tokenizer);
 
     if (tokenizer.peek_next().type == TOKEN_LEFT_SQUARE_BRACE) {
         while (tokenizer.peek_next().type == TOKEN_LEFT_SQUARE_BRACE) {
@@ -571,7 +575,7 @@ Crank_Expression* parse_array_index(Tokenizer_State& tokenizer) {
 }
 
 Crank_Expression* parse_property_accessor(Tokenizer_State& tokenizer) {
-    auto base_accessor = parse_value(tokenizer);
+    auto base_accessor = parse_array_index(tokenizer);
 
     if (tokenizer.peek_next().type == TOKEN_DOT) {
         // accessor!
@@ -596,11 +600,11 @@ Crank_Expression* parse_unary(Tokenizer_State& tokenizer) {
         }
 
         assert(operation != -1 && "something went wrong here.");
-        // return unary_expression(parse_property_accessor(tokenizer), operation);
-        return unary_expression(parse_array_index(tokenizer), operation);
+        return unary_expression(parse_property_accessor(tokenizer), operation);
+        // return unary_expression(parse_array_index(tokenizer), operation);
     }
 
-    return parse_array_index(tokenizer);
+    return parse_property_accessor(tokenizer);
 }
 
 Crank_Expression* parse_factor(Tokenizer_State& tokenizer) {
@@ -609,7 +613,8 @@ Crank_Expression* parse_factor(Tokenizer_State& tokenizer) {
     while (
         tokenizer.peek_next().type == TOKEN_MUL ||
         tokenizer.peek_next().type == TOKEN_DIV ||
-        tokenizer.peek_next().type == TOKEN_MOD
+        tokenizer.peek_next().type == TOKEN_MOD ||
+        tokenizer.peek_next().type == TOKEN_AND
     ) {
         auto operator_token = tokenizer.read_next();
         int operation = token_to_operation(operator_token);
@@ -626,7 +631,8 @@ Crank_Expression* parse_term(Tokenizer_State& tokenizer) {
 
     while (
         tokenizer.peek_next().type == TOKEN_ADD ||
-        tokenizer.peek_next().type == TOKEN_SUB
+        tokenizer.peek_next().type == TOKEN_SUB ||
+        tokenizer.peek_next().type == TOKEN_OR
     ) {
         auto operator_token = tokenizer.read_next();
         int operation = token_to_operation(operator_token);
@@ -1078,7 +1084,12 @@ int main(int argc, char** argv){
     // char* test_parse = "test.x + hello.y";
     // char* test_parse = "test[0][2][4]";
     // char* test_parse = "test[0][1]";
-    char* test_parse = "test[0][1+1].yz + hello.xyz";
+    // char* test_parse = "(test[0][1+1]).yz + hello.xyz";
+
+    // I wish I had a proper test suite for these cases
+    // but building my own tree is a little annoying.
+    // TODO
+    char* test_parse = "A && B || B && D";
     // char* test_parse = "test[1 + 2]";
     // char* test_parse = "test[0]";
     // char* test_parse = "0";
