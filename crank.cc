@@ -2,6 +2,9 @@
   A small programming language interpreter/transpiler
 
   3/29/2023:
+  TODO: 
+  - Boolean types
+  - Replace using Value to Expression in a lot of places.
   NOTE: A lot of thing in the "compiler" are not
   typechecked as of now! I am checking these functional changes
   in but invalid types are still allowed
@@ -11,7 +14,7 @@
   - Basic to C++ compiler (just compile types in I suppose)
 
   NOTE: have to refactor like all of this later...
-  because it's not object oriented.
+  because it's not object oriented in the traditional sense.
 
   Code is kind of messy because it's a "hack" project.
 
@@ -42,14 +45,6 @@
   TODO: Proper error handling takes a lot of code, and I don't have that
   much time so I've kinda stopped doing it at some point just to get sutff done
   faster.
-
-  // BOOLEAN!
-    - proper type checking on values.
-    - Keyword restriction?
-    -  need to handle symbol lookup
-    -  variable multiple variable redeclarations. (shadowing should be okay.)
-    - Parsing expression trees.
-    - Function Declaration
 */
 #include "tokenizer.h"
 #include <cstdio>
@@ -358,6 +353,8 @@ enum Crank_Expression_Type {
     EXPRESSION_BINARY,
 };
 
+// NOTE: split expression parsing into a separate
+// file
 enum Crank_Expression_Operator {
     OPERATOR_NOT, // unary
     OPERATOR_NEGATE,
@@ -369,6 +366,8 @@ enum Crank_Expression_Operator {
     OPERATOR_MUL,
     OPERATOR_DIV,
     OPERATOR_MOD,
+
+    OPERATOR_ARRAY_INDEX,
 
     /* NOTE: when evaluating make sure that lvalue is a symbol! */
     OPERATOR_EQUAL,
@@ -400,6 +399,8 @@ const char* Crank_Expression_Operator_string_table[] = {
     "(mul)",
     "(div)",
     "(mod)",
+
+    "(array-index)",
 
     "(=)",
     "(+=)",
@@ -525,8 +526,9 @@ Crank_Expression* parse_factor(Tokenizer_State& tokenizer);
 // - or !
 Crank_Expression* parse_unary(Tokenizer_State& tokenizer);
 
-// dot syntax
+// dot syntax NOTE: don't have pointer dereference yet but it should come before this!
 Crank_Expression* parse_property_accessor(Tokenizer_State& tokenizer);
+Crank_Expression* parse_array_index(Tokenizer_State& tokenizer);
 Crank_Expression* parse_value(Tokenizer_State& tokenizer);
 
 Crank_Expression* parse_value(Tokenizer_State& tokenizer) {
@@ -541,6 +543,31 @@ Crank_Expression* parse_value(Tokenizer_State& tokenizer) {
         assert(value_read.good && "Failed to read value?");
         return value_expression(value_read.value);
     }
+}
+
+Crank_Expression* parse_array_index(Tokenizer_State& tokenizer) {
+    Crank_Expression* index_expression = nullptr;
+    auto              base_accessor    = parse_property_accessor(tokenizer);
+
+    if (tokenizer.peek_next().type == TOKEN_LEFT_SQUARE_BRACE) {
+        while (tokenizer.peek_next().type == TOKEN_LEFT_SQUARE_BRACE) {
+            tokenizer.read_next();
+
+            auto inner_expression = parse_expression(tokenizer);
+            assert(inner_expression && "An array index operation requires an expression!");
+
+            auto closing_brace = tokenizer.read_next();
+            assert(closing_brace.type == TOKEN_RIGHT_SQUARE_BRACE && "Array index should be closed with brace!");
+            // TODO: Should be checked later to see if it's an integer type.
+
+            index_expression = binary_expression(base_accessor, inner_expression, OPERATOR_ARRAY_INDEX);
+            base_accessor = index_expression;
+        }
+
+        return index_expression;
+    }
+
+    return base_accessor;
 }
 
 Crank_Expression* parse_property_accessor(Tokenizer_State& tokenizer) {
@@ -569,10 +596,11 @@ Crank_Expression* parse_unary(Tokenizer_State& tokenizer) {
         }
 
         assert(operation != -1 && "something went wrong here.");
-        return unary_expression(parse_property_accessor(tokenizer), operation);
+        // return unary_expression(parse_property_accessor(tokenizer), operation);
+        return unary_expression(parse_array_index(tokenizer), operation);
     }
 
-    return parse_property_accessor(tokenizer);
+    return parse_array_index(tokenizer);
 }
 
 Crank_Expression* parse_factor(Tokenizer_State& tokenizer) {
@@ -1047,7 +1075,13 @@ int main(int argc, char** argv){
     // properties. Some types will need built in properties
     // and will be handled accordingly...
     
-    char* test_parse = "test.x + hello.y";
+    // char* test_parse = "test.x + hello.y";
+    // char* test_parse = "test[0][2][4]";
+    // char* test_parse = "test[0][1]";
+    char* test_parse = "test[0][1+1].yz + hello.xyz";
+    // char* test_parse = "test[1 + 2]";
+    // char* test_parse = "test[0]";
+    // char* test_parse = "0";
     // char* test_parse = "test.x";
     printf("Parsing: %s\n", test_parse);
     Tokenizer_State tokenizer(test_parse);
