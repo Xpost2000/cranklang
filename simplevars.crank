@@ -11,6 +11,18 @@
 // x : int[][] = [[2, 4, 3, 4], [3, 4, 5]];
 //x2 : int[][3] = [[2, 3, 4, 5], [3, 4, 5, 6, 7]];
 
+typedef Nested : {
+        x: int;
+        y: int;
+}
+
+typedef TestType : {
+        x: int;
+        y: int;
+        z: int;
+        s: Nested;
+}
+
 
 // TODO reserve keywords
 // for symbols
