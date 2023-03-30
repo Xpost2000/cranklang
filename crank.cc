@@ -2,9 +2,18 @@
   A small programming language interpreter/transpiler
 
   3/29/2023:
+
+  NOTE: I'm not deleting anything here because
+  the OS will reclaim all memory, and it's only running until
+  the compiler finishes. It's not real time so that's fine.
+
   TODO: 
   - Boolean types
   - Replace using Value to Expression in a lot of places.
+  - Replace most instances of std::string
+    There's too much copying that I'm not super comfortable with,
+    but that's part of the clean up code.
+
   NOTE: A lot of thing in the "compiler" are not
   typechecked as of now! I am checking these functional changes
   in but invalid types are still allowed
@@ -96,6 +105,12 @@ enum Crank_Object_Literal_Decl_Type {
 
 // Might change to object oriented.
 // NOTE: fat struct.
+
+struct Crank_Statement;
+struct Crank_Function_Body {
+    std::vector<Crank_Statement*> body;
+};
+
 struct Crank_Value {
     int value_type; // This is just the obligatory "parse" information
     Crank_Type* type; // This is the actual discriminator for the value type.
@@ -118,6 +133,7 @@ struct Crank_Value {
     // used for functions
     bool is_function_call;
     std::vector<Crank_Value> call_parameters;
+    Crank_Function_Body body;
     // TODO: add list of statements.
     // functions are theoretically values in Crank.
 
@@ -560,9 +576,11 @@ Crank_Expression* parse_value(Tokenizer_State& tokenizer) {
         return expression;
     } else {
         auto value_read = read_value(tokenizer);
-        assert(value_read.good && "Failed to read value?");
-        return value_expression(value_read.value);
+        if (value_read.good) {
+            return value_expression(value_read.value);
+        }
     }
+    return nullptr;
 }
 
 Crank_Expression* parse_array_index(Tokenizer_State& tokenizer) {
@@ -570,6 +588,10 @@ Crank_Expression* parse_array_index(Tokenizer_State& tokenizer) {
     auto              base_accessor    = parse_value(tokenizer);
 
     if (tokenizer.peek_next().type == TOKEN_LEFT_SQUARE_BRACE) {
+        if (base_accessor == nullptr) {
+            printf("warning: no base accessor?\n");
+        }
+
         while (tokenizer.peek_next().type == TOKEN_LEFT_SQUARE_BRACE) {
             tokenizer.read_next();
 
@@ -723,7 +745,6 @@ Crank_Expression* parse_expression(Tokenizer_State& tokenizer) {
     return parse_assignment_or_compound(tokenizer);
 }
 
-
 void _debug_print_crank_value(Crank_Value value) {
     switch (value.value_type) {
         case VALUE_TYPE_LITERAL: {
@@ -775,6 +796,201 @@ void _debug_print_expression_tree(Crank_Expression* root) {
             printf(") ");
         } break;
     }
+}
+
+// I need to rewrite like 90% of this later.
+enum Crank_Statement_Type {
+    STATEMENT_BLOCK, // { curly brace blocks }
+    STATEMENT_DECLARATION, // variable decl mostly
+    STATEMENT_EXPRESSION, // the normal kind of statement
+    STATEMENT_IF,
+    STATEMENT_WHILE,
+    STATEMENT_RETURN,
+    STATEMENT_COUNT
+};
+const char* Crank_Statement_Type_string_table[] = {
+    "(block)",
+    "(declaration)",
+    "(expression)",
+    "(if-statement)",
+    "(while-statement)",
+    "(return-statement)",
+};
+
+// NOTE: might change soon.
+struct Crank_Statement_If {
+    Crank_Expression* condition;
+    Crank_Statement* true_branch;
+    Crank_Statement* false_branch;
+};
+
+struct Crank_Statement_While {
+    Crank_Expression* condition;
+    Crank_Statement* action;
+};
+
+struct Crank_Statement_Return {
+    Crank_Expression* result;
+};
+
+struct Crank_Statement_Expression {
+    Crank_Expression* expression;
+};
+
+struct Crank_Statement_Declaration {
+    Crank_Declaration* declaration;
+};
+
+struct Crank_Statement_Block {
+    std::vector<Crank_Statement*> body;
+};
+
+struct Crank_Statement {
+    int type;
+    Crank_Statement_If          if_statement;
+    Crank_Statement_While       while_statement;
+    Crank_Statement_Return      return_statement;
+    Crank_Statement_Expression  expression_statement;
+    Crank_Statement_Declaration declaration_statement;
+    Crank_Statement_Block       block_statement; // or a compound statement
+};
+
+void _debug_print_statement(Crank_Statement* statement) {
+    printf("((%s) ", Crank_Statement_Type_string_table[statement->type]);
+    switch (statement->type) {
+        case STATEMENT_BLOCK: {
+            printf("\n");
+            for (auto& inner_statement : statement->block_statement.body) {
+                _debug_print_statement(inner_statement);
+                printf("\n");
+            }
+            printf("\n");
+        } break;
+        case STATEMENT_IF: {
+            _debug_print_expression_tree(statement->if_statement.condition);
+            printf("\n");
+            if (statement->if_statement.true_branch) {
+                _debug_print_statement(statement->if_statement.true_branch);
+            }
+            printf("\n");
+            if (statement->if_statement.false_branch) {
+                _debug_print_statement(statement->if_statement.false_branch);
+            }
+            printf("\n");
+        } break;
+        case STATEMENT_WHILE: {
+            _debug_print_expression_tree(statement->while_statement.condition);
+            printf("\n");
+            if (statement->while_statement.action) {
+                _debug_print_statement(statement->while_statement.action);
+            }
+        } break;
+        case STATEMENT_EXPRESSION: {
+            assert(statement->expression_statement.expression);
+            _debug_print_expression_tree(statement->expression_statement.expression);
+        } break;
+        case STATEMENT_RETURN: {
+            _debug_print_expression_tree(statement->return_statement.result);
+        } break;
+    }
+    printf(") ");
+}
+
+Crank_Statement* parse_if_statement(Tokenizer_State& tokenizer);
+Crank_Statement* parse_while_statement(Tokenizer_State& tokenizer);
+Crank_Statement* parse_return_statement(Tokenizer_State& tokenizer);
+Crank_Statement* parse_expression_statement(Tokenizer_State& tokenizer);
+Crank_Statement* parse_declaration_statement(Tokenizer_State& tokenizer);
+
+Crank_Statement* parse_expression_statement(Tokenizer_State& tokenizer) {
+    auto expression = parse_expression(tokenizer);
+
+    if (expression) {
+        Crank_Statement* expression_statement = new Crank_Statement;
+        expression_statement->type = STATEMENT_EXPRESSION;
+        expression_statement->expression_statement.expression = expression;
+        return expression_statement;
+    }
+
+    return nullptr;
+}
+
+Crank_Statement* parse_return_statement(Tokenizer_State& tokenizer) {
+    auto return_symbol = tokenizer.peek_next();
+    if (return_symbol.type == TOKEN_SYMBOL) {
+        if (return_symbol.string == "return") { // good
+            tokenizer.read_next();
+
+            auto expression = parse_expression(tokenizer);
+            
+            Crank_Statement* return_statement = new Crank_Statement;
+            return_statement->type = STATEMENT_RETURN;
+            return_statement->return_statement.result = expression;
+            return return_statement;
+        }
+    }
+
+    return nullptr;
+}
+
+Crank_Statement* parse_block_statement(Tokenizer_State& tokenizer) {
+    Crank_Statement* result = nullptr;
+
+    if (tokenizer.peek_next().type == TOKEN_LEFT_CURLY_BRACE) {
+        result = new Crank_Statement;
+        result->type = STATEMENT_BLOCK;
+
+        tokenizer.read_next();
+
+        while (tokenizer.peek_next().type != TOKEN_RIGHT_CURLY_BRACE) {
+            /* exhaust all statement types to parse. */
+#if 0
+            result = parse_if_statement(tokenizer);
+            if (result) {
+                result->block_statement.body.push_back(result);
+                continue;
+            }
+
+            result = parse_while_statement(tokenizer);
+            if (result) {
+                result->block_statement.body.push_back(result);
+                continue;
+            }
+#endif
+#if 0
+            result = parse_declaration_statement(tokenizer);
+            if (result) {
+                result->block_statement.body.push_back(result);
+                assert(tokenizer.read_next().type == TOKEN_SEMICOLON && "Statement requiring semicolon");
+                continue;
+            }
+#endif
+            auto block_statement = parse_block_statement(tokenizer);
+            if (block_statement) {
+                result->block_statement.body.push_back(block_statement);
+                continue;
+            }
+
+            // NOTE: semicolon requiring statements
+            auto return_statement = parse_return_statement(tokenizer);
+            if (return_statement) {
+                result->block_statement.body.push_back(return_statement);
+                assert(tokenizer.read_next().type == TOKEN_SEMICOLON && "Statement requiring semicolon");
+                continue;
+            }
+
+            auto expression_statement = parse_expression_statement(tokenizer);
+            if (expression_statement) {
+                result->block_statement.body.push_back(expression_statement);
+                assert(tokenizer.read_next().type == TOKEN_SEMICOLON && "Statement requiring semicolon");
+                continue;
+            }
+        }
+        tokenizer.read_next();
+
+    }
+
+    return result;
 }
 
 Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
@@ -1110,15 +1326,39 @@ int main(int argc, char** argv){
     // but building my own tree is a little annoying.
     // TODO
     // char* test_parse = "A && B || B && D";
-    char* test_parse = "A & B | B & D ^ 1234";
-    // char* test_parse = "test[1 + 2]";
+    // char* test_parse = "A & B | B & D ^ 1234";
+    // char* test_parse = ";";
+#if 0
+    char* test_parse = "test[1 + 2]";
     // char* test_parse = "test[0]";
     // char* test_parse = "0";
     // char* test_parse = "test.x";
     printf("Parsing: %s\n", test_parse);
     Tokenizer_State tokenizer(test_parse);
     auto t = parse_expression(tokenizer);
-    _debug_print_expression_tree(t);
+    if (t) {
+        _debug_print_expression_tree(t);
+    } else {
+        printf("no expression!\n");
+    }
+#else
+    // char* test_parse = "{ { x = 4; return 5; } y.z.x = 6; return 123; }";
+    // char* test_parse = "{ x = 4; y = 4; return 6; }";
+    // char* test_parse = "test[0]";
+    // char* test_parse = "0";
+    // char* test_parse = "test.x";
+    // printf("Parsing: %s\n", test_parse);
+    printf("Parsing: %s\n", test_parse);
+    Tokenizer_State tokenizer(test_parse);
+    auto t = parse_block_statement(tokenizer);
+    // auto t = parse_block_statement(tokenizer);
+
+    if (t) {
+        _debug_print_statement(t);
+    } else {
+        printf("no statements!!\n");
+    }
+#endif
     printf("hi, did you crash\n");
     
     // File_Buffer test_to_tokenize = File_Buffer("simplevars.crank");
