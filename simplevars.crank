@@ -1,19 +1,3 @@
-// Establish that on the top level
-// only variable declarations and initializations
-// as well as struct definitions or imports are acceptable.
-
-
-// NOTE: we are allowing variables to initialize using function expressions
-// they will be calculated at some point.
-// "?comptime?"
-
-// expression: int = 4 * 5 + 3;
-// x : int[][] = [[2, 4, 3, 4], [3, 4, 5]];
-//x2 : int[][3] = [[2, 3, 4, 5], [3, 4, 5, 6, 7]];
-
-
-// TODO reserve keywords
-// for symbols
-function : int(x: int, y: int) {
+function : int(i: int[], y: int) {
         return 0;
-}
+};

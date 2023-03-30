@@ -176,7 +176,10 @@ struct Crank_Type {
     std::string name;
     // TODO: for now shove this in here until I figure out how this array thing works.
     std::vector<int> array_dimensions; // empty is not an array. -1 means don't care. might be flexible.
+
+    bool is_function;
     std::vector<Crank_Declaration> call_parameters;
+
     std::vector<Crank_Record_Member> members;
 };
 
@@ -222,7 +225,8 @@ Crank_Type* register_new_type(
     std::string_view name,
     int type,
     std::vector<int> array_dimensions={},
-    std::vector<Crank_Declaration> call_parameters={}
+    std::vector<Crank_Declaration> call_parameters={},
+    bool is_function = true
 ) {
     global_type_table.push_back(new Crank_Type);
     Crank_Type* result = global_type_table.back();
@@ -230,14 +234,17 @@ Crank_Type* register_new_type(
     result->name = std::string(name);
     result->array_dimensions = array_dimensions;
     result->call_parameters  = call_parameters;
+    result->is_function = is_function;
     return result;
 }
 
 // TODO: Function type checking
 Crank_Type* lookup_type(
+    // NOTE: should make this type-declaration but okay
     std::string_view name,
     std::vector<int> array_dimensions={},
-    std::vector<Crank_Declaration> call_parameters={}
+    std::vector<Crank_Declaration> call_parameters={},
+    bool is_function = false
 ) {
     // NOTE: when looking up an array variant
     //       type.
@@ -254,7 +261,7 @@ Crank_Type* lookup_type(
     // exists first.
 
     // Do a more thorough type check.
-    if (call_parameters.size() > 0) { // remarkably similar to the array case.
+    if (is_function || call_parameters.size() > 0) { // remarkably similar to the array case.
         Crank_Type* result = nullptr;
         for (auto type : global_type_table) {
             if (type->name == name) {
@@ -286,7 +293,7 @@ Crank_Type* lookup_type(
 
         if (!result) {
             // register the function type.
-            result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters);
+            result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters, is_function);
         }
 
         return result;
@@ -319,7 +326,7 @@ Crank_Type* lookup_type(
                 // NOTE:
                 // Arrays share the same "base value_type" as their
                 // scalar counterpart.
-                result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters);
+                result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters, is_function);
             }
 
             return result;
@@ -349,6 +356,7 @@ struct Crank_Type_Declaration { // NOTE: for semantic analysis. Not doing type s
     std::string name;
     std::vector<int> array_dimensions;
     std::vector<Crank_Declaration> call_parameters;
+    bool is_function;
 };
 
 // -1 is bad
@@ -392,6 +400,7 @@ Error<Crank_Type_Declaration> read_type_declaration(Tokenizer_State& tokenizer) 
     std::vector<int> array_dimensions;
 
     // parse an array type
+    printf("try to find array specifier\n");
     while (true) {
         int current_dimension = -1;
         int read_result = read_array_specifier(tokenizer, &current_dimension);
@@ -405,24 +414,36 @@ Error<Crank_Type_Declaration> read_type_declaration(Tokenizer_State& tokenizer) 
     }
 
     // parse a function type
+    printf("try to find function parameters\n");
     std::vector<Crank_Declaration> call_parameters;
+    bool is_function = false;
     if (tokenizer.peek_next().type == TOKEN_LEFT_PARENTHESIS) {
+        printf("This is a function param list!\n");
         tokenizer.read_next();
+        is_function = true;
         while (tokenizer.peek_next().type != TOKEN_RIGHT_PARENTHESIS) {
+            printf("trying to read param.\n");
             auto decl = parse_variable_decl(tokenizer);
 
             if (decl.good) {
                 call_parameters.push_back(decl.value);
-                assert(tokenizer.peek_next().type == TOKEN_COMMA && "Comma separated params list!");
+                if (tokenizer.peek_next().type == TOKEN_RIGHT_PARENTHESIS) {
+                    continue;
+                } else {
+                    assert(tokenizer.peek_next().type == TOKEN_COMMA && "Comma separated params list!");
+                    tokenizer.read_next();
+                }
             }
         }
-        tokenizer.read_next();
+        printf("finished param list!\n");
+        assert(tokenizer.read_next().type == TOKEN_RIGHT_PARENTHESIS);
     }
 
-    if (call_parameters.size()) printf("Function decl found with %d parameters\n", call_parameters.size());
+    if (is_function) printf("Function decl found with %d parameters\n", call_parameters.size());
     Crank_Type_Declaration result;
 
     result.name = name.string;
+    result.is_function = is_function;
     result.array_dimensions = array_dimensions;
     result.call_parameters  = call_parameters;
 
@@ -981,11 +1002,14 @@ Crank_Statement* parse_declaration_statement(Tokenizer_State& tokenizer);
 
 Crank_Statement* parse_declaration_statement(Tokenizer_State& tokenizer) {
     Error<Crank_Declaration> parse_variable_decl(Tokenizer_State& tokenizer);
+    printf("parsing inline decl\n");
     auto inline_decl = parse_variable_decl(tokenizer);
     if (!inline_decl.good) {
+        printf("not a decl! fail!\n");
         return nullptr;
     }
 
+    printf("Making new declaration\n");
     // creating heap copy of decl cause I should've thought of that
     // sooner.
     Crank_Declaration* decl = new Crank_Declaration;
@@ -1075,28 +1099,34 @@ Crank_Statement* parse_if_statement(Tokenizer_State& tokenizer) {
 
 Crank_Statement* parse_any_statement(Tokenizer_State& tokenizer) {
     /* exhaust all statement types to parse. */
+    printf("trying to parse if\n");
     auto if_statement = parse_if_statement(tokenizer);
     if (if_statement) return if_statement;
 
+    printf("trying to parse while\n");
     auto while_statement = parse_while_statement(tokenizer);
     if (while_statement) return while_statement;
 
-    auto declaration_statement = parse_declaration_statement(tokenizer);
-    if (declaration_statement) {
-        assert(tokenizer.read_next().type == TOKEN_SEMICOLON && "Statement requiring semicolon");
-        return declaration_statement;
-    }
-
+    printf("trying to parse block\n");
     auto block_statement = parse_block_statement(tokenizer);
     if (block_statement) return block_statement;
 
     // NOTE: semicolon requiring statements
+    printf("trying to parse return\n");
     auto return_statement = parse_return_statement(tokenizer);
     if (return_statement) {
         assert(tokenizer.read_next().type == TOKEN_SEMICOLON && "Statement requiring semicolon");
         return return_statement;
     }
 
+    printf("trying to parse declaration\n");
+    auto declaration_statement = parse_declaration_statement(tokenizer);
+    if (declaration_statement) {
+        assert(tokenizer.read_next().type == TOKEN_SEMICOLON && "Statement requiring semicolon");
+        return declaration_statement;
+    }
+
+    printf("trying to parse expression\n");
     auto expression_statement = parse_expression_statement(tokenizer);
     if (expression_statement) {
         assert(tokenizer.read_next().type == TOKEN_SEMICOLON && "Statement requiring semicolon");
@@ -1254,24 +1284,28 @@ Error<Inline_Decl> read_inline_declaration(Tokenizer_State& tokenizer) {
         return Error<Inline_Decl>::fail("Not a declaration");
     } 
 
-    auto name = tokenizer.read_next();
-    assert(name.type == TOKEN_SYMBOL);
-    auto colon = tokenizer.read_next();
-    assert(colon.type == TOKEN_COLON);
+    auto name = tokenizer.peek_next();
+    if (name.type != TOKEN_SYMBOL) return Error<Inline_Decl>::fail("not a symbol, cannot find name");
+    tokenizer.read_next();
+    auto colon = tokenizer.peek_next();
+    if (colon.type != TOKEN_COLON) return Error<Inline_Decl>::fail("not a colon, cannot be a decl");
+    tokenizer.read_next();
 
     auto type_entry = read_type_declaration(tokenizer);
     assert(type_entry.good && "Bad type entry?");
+    printf("Checking decl type...\n");
     auto type = lookup_type(
         type_entry.value.name,
         type_entry.value.array_dimensions,
-        type_entry.value.call_parameters
+        type_entry.value.call_parameters,
+        type_entry.value.is_function
     );
     assert(type && "Type not found! Cannot resolve!");
 
     result.array_dimensions = type_entry.value.array_dimensions;
     result.object_type = type; // NOTE? need to check something
 
-    if (type_entry.value.call_parameters.size()) {
+    if (type_entry.value.is_function) {
         printf("This decl is a function!\n");
         auto function_statement = parse_any_statement(tokenizer);
         if (function_statement) {
@@ -1397,14 +1431,18 @@ Error<Crank_Declaration> parse_typedef(Tokenizer_State& tokenizer) {
 }
 
 Error<Crank_Declaration> parse_variable_decl(Tokenizer_State& tokenizer) {
-    auto inline_decl = read_inline_declaration(tokenizer).value;
+    auto inline_decl = read_inline_declaration(tokenizer);
+    if (!inline_decl.good) {
+        return Error<Crank_Declaration>::fail("No declaration found?");
+    }
+
     Crank_Declaration decl;
     decl.decl_type = DECL_OBJECT;
-    decl.object_type = inline_decl.object_type;
-    decl.array_dimensions = inline_decl.array_dimensions;
-    decl.name = inline_decl.name;
+    decl.object_type = inline_decl.value.object_type;
+    decl.array_dimensions = inline_decl.value.array_dimensions;
+    decl.name = inline_decl.value.name;
     // do something about 'has value'?
-    decl.value = inline_decl.value;
+    decl.value = inline_decl.value.value;
     return Error<Crank_Declaration>::okay(decl);
 }
 
@@ -1460,6 +1498,8 @@ void register_default_types() {
     register_new_type("strlit",TYPE_STRINGLITERAL);
     register_new_type("void",  TYPE_VOID);
 }
+
+#include "cplusplus_codegen.cc"
 
 int main(int argc, char** argv){
     register_default_types();
