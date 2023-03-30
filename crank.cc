@@ -77,6 +77,7 @@ enum Crank_Types {
     TYPE_INTEGER,
     TYPE_FLOAT,
     TYPE_STRINGLITERAL,
+    TYPE_CHAR, // NOT IMPLEMENTED
     TYPE_RECORD, // NOT FULLY IMPLEMENTED
     TYPE_VOID, // NOT IMPLEMENTED
     TYPE_RENAME, // typedef, this doesn't really have much significance, so I might remove this.
@@ -109,6 +110,7 @@ enum Crank_Object_Literal_Decl_Type {
 // NOTE: fat struct.
 
 struct Crank_Statement;
+struct Crank_Expression;
 struct Crank_Value {
     int value_type; // This is just the obligatory "parse" information
     Crank_Type* type; // This is the actual discriminator for the value type.
@@ -124,13 +126,14 @@ struct Crank_Value {
         Crank_Object_Literal* literal_value;
     };
     std::string string_value; // should be interned.
+    // std::string unescaped_string_value; // I should escape when evaling.
 
     // used for arrays.
     std::vector<Crank_Value> array_elements;
 
     // used for functions
     bool is_function_call;
-    std::vector<Crank_Value> call_parameters;
+    std::vector<Crank_Expression*> call_parameters;
     Crank_Statement* body;
     // TODO: add list of statements.
     // functions are theoretically values in Crank.
@@ -264,8 +267,10 @@ Crank_Type* lookup_type(
 
     // Do a more thorough type check.
     if (is_function || call_parameters.size() > 0) { // remarkably similar to the array case.
+        printf("Checking against function types?");
         Crank_Type* result = nullptr;
         for (auto type : global_type_table) {
+            if (!type->is_function) continue;
             if (type->name == name) {
                 result = type;
                 // still need to check array size just in case.
@@ -289,6 +294,8 @@ Crank_Type* lookup_type(
                             result = nullptr;
                         }
                     }
+                } else {
+                    result = nullptr;
                 }
             }
         }
@@ -296,6 +303,7 @@ Crank_Type* lookup_type(
         if (!result) {
             // register the function type.
             result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters, true);
+            printf("Register new function type\n");
         }
 
         return result;
@@ -352,6 +360,9 @@ struct Crank_Module {
     std::string module_name; // usually just the file name. Can be overriden?
     std::vector<Crank_Module*> imports;
     std::vector<Crank_Declaration> decls;
+
+    // hack
+    bool has_main;
 };
 
 struct Crank_Type_Declaration { // NOTE: for semantic analysis. Not doing type system things here!
@@ -857,6 +868,8 @@ void _debug_print_crank_value(Crank_Value value) {
                     printf("(bool %s) ", (value.int_value == 1) ? "TRUE" : "FALSE");
                 } else if (value.type->type == TYPE_STRINGLITERAL) {
                     printf("(strlit \"%s\") ", value.string_value.c_str());
+                } else if (value.type->type == TYPE_CHAR) {
+                    printf("(char \"%c\") ", value.int_value);
                 } else {
                     printf("(unprintable) ");
                 }
@@ -1121,10 +1134,16 @@ Crank_Statement* parse_any_statement(Tokenizer_State& tokenizer) {
     }
 
     printf("trying to parse declaration\n");
-    auto declaration_statement = parse_declaration_statement(tokenizer);
-    if (declaration_statement) {
-        assert(tokenizer.read_next().type == TOKEN_SEMICOLON && "Statement requiring semicolon");
-        return declaration_statement;
+    {
+        int current_read_cursor = tokenizer.read_cursor;
+        // hack, I need to uneat or "vomit" out a token
+        auto declaration_statement = parse_declaration_statement(tokenizer);
+        if (declaration_statement) {
+            assert(tokenizer.read_next().type == TOKEN_SEMICOLON && "Statement requiring semicolon");
+            return declaration_statement;
+        } else {
+            tokenizer.read_cursor = current_read_cursor;
+        }
     }
 
     printf("trying to parse expression\n");
@@ -1166,7 +1185,8 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
         case TOKEN_STRING: {
             printf("Found string literal.\n");
             value.type = lookup_type("strlit");
-            value.string_value = first.stringvalue;
+            // NOTE?
+            value.string_value = first.string;
             return Error<Crank_Value>::okay(value);
         } break;
         case TOKEN_NUMBERINT: {
@@ -1190,7 +1210,8 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
                 // object literal
                 value.value_type = VALUE_TYPE_LITERAL;
                 value.type = lookup_type(first.string);
-                // TODO
+                // TODO causes issues with non-parenthesized things
+                // need tochange syntax to avoid conflict
                 {
                     /* here we go! */
                     // keep reading declarations.
@@ -1207,12 +1228,13 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
 
                     value.is_function_call = true;
                     while (tokenizer.peek_next().type != TOKEN_RIGHT_PARENTHESIS) {
-                        auto new_value = read_value(tokenizer);
-                        assert(new_value.good && "Bad function param passing");
-                        value.call_parameters.push_back(new_value.value);
+                        auto new_value = parse_expression(tokenizer);
+                        assert(new_value && "Bad function param passing");
+                        value.call_parameters.push_back(new_value);
 
                         if (tokenizer.peek_next().type == TOKEN_COMMA) {
                             tokenizer.read_next();
+                            printf("HI I ATE A COMMA TODAY!\n");
                         } else if (tokenizer.peek_next().type == TOKEN_RIGHT_PARENTHESIS) {
                             break;
                         } else {
@@ -1308,6 +1330,7 @@ Error<Inline_Decl> read_inline_declaration(Tokenizer_State& tokenizer) {
     result.name = name.string;
 
     if (type_entry.value.is_function) {
+        assert(type->is_function);
         printf("This decl is a function!\n");
         auto function_statement = parse_any_statement(tokenizer);
         if (function_statement) {
@@ -1475,6 +1498,10 @@ Error<Crank_Module> load_module_from_source(std::string module_name, std::string
                     auto new_decl = parse_variable_decl(tokenizer);
                     if (!new_decl.good) {
                         printf("%s\n", new_decl.message);
+
+                        if (new_decl.value.object_type->is_function && new_decl.value.name == "main") {
+                            module.has_main = true;
+                        }
                     } else  {
                         printf("new decl added\n");
                         module.decls.push_back(new_decl);
@@ -1502,6 +1529,7 @@ void register_default_types() {
     register_new_type("int",   TYPE_INTEGER);
     register_new_type("float", TYPE_FLOAT);
     register_new_type("bool",  TYPE_BOOLEAN);
+    register_new_type("char",  TYPE_CHAR);
     register_new_type("strlit",TYPE_STRINGLITERAL);
     register_new_type("void",  TYPE_VOID);
 }
@@ -1543,7 +1571,8 @@ protected:
         }
     }
 
-    virtual std::string get_module_compiled_name(Crank_Module& module) = 0;
+    virtual void output_entry_point(FILE* output) {}
+
 public:
     Crank_Codegen() {}
     ~Crank_Codegen() {}
@@ -1561,18 +1590,31 @@ public:
 
         printf("Outputting declarations!\n");
         for (auto& decl : module.decls) {
+            if (decl.name == "main") {
+                decl.name = "crank_mainpoint_entry";
+            }
             output_declaration(file, &decl);
         }
 
         for (auto& decl : module.decls) {
             if (decl.object_type->is_function) {
                 printf("outputting function decl!\n");
+
+                if (decl.name == "main") {
+                    decl.name = "crank_mainpoint_entry";
+                }
                 output_function_declaration(file, &decl);
             }
         }
 
+        if (module.has_main) {
+            output_entry_point(file);
+        }
+
         fclose(file);
     }
+
+    virtual std::string get_module_compiled_name(Crank_Module& module) = 0;
 };
 
 /*
@@ -1589,6 +1631,17 @@ protected:
     void output_value(FILE* output, Crank_Value* value) {
         if (value->value_type == VALUE_TYPE_SYMBOL) {
             fprintf(output, "%s", value->symbol_name.c_str());
+            if (value->is_function_call) {
+                fprintf(output, "(");
+                for (int i = 0; i < value->call_parameters.size(); ++i) {
+                    output_expression(output, value->call_parameters[i]);
+                    if (i+1 >= value->call_parameters.size()) {
+                    } else {
+                        fprintf(output, ", ");
+                    }
+                }
+                fprintf(output, ")");
+            }
         } else {
             // NOTE: TODO ON ARRAYS
             // AND FUNCTIONS?
@@ -1625,7 +1678,7 @@ protected:
                         fprintf(output, "%f", value->float_value);
                     } break;
                     case TYPE_STRINGLITERAL: {
-                        fprintf(output, "%s", value->string_value.c_str());
+                        fprintf(output, "\"%s\"", value->string_value.c_str());
                     } break;
                     case TYPE_RECORD: {
                         // TODO: parse
@@ -1663,6 +1716,8 @@ protected:
 
 #include "cplusplus_codegen.cc"
 
+#include "os_process_win32.c"
+
 int main(int argc, char** argv){
     register_default_types();
 
@@ -1688,7 +1743,7 @@ int main(int argc, char** argv){
     // char* test_parse = ";";
 #if 0
 #if 0
-    char* test_parse = "test[1 + 2]";
+    char* test_parse = "test(3)";
     // char* test_parse = "test[0]";
     // char* test_parse = "0";
     // char* test_parse = "test.x";
@@ -1707,9 +1762,7 @@ int main(int argc, char** argv){
     // char* test_parse = "0";
     char* test_parse =
         R"(
-{
-x : int = 5;
-}
+x: int = 4;
 )";
     // printf("Parsing: %s\n", test_parse);
     printf("Parsing: %s\n", test_parse);
@@ -1727,18 +1780,43 @@ x : int = 5;
 
     #else
     
-    File_Buffer test_to_tokenize = File_Buffer("simplevars.crank");
-
+    std::vector<std::string> module_names;
     Crank_Codegen* generator = new CPlusPlusCodeGenerator();
+    for (int i = 1; i < argc; ++i) {
+        std::string filename = argv[i];
+        File_Buffer buffer = File_Buffer(filename.c_str());
 
-    auto e = load_module_from_source("simplevars", test_to_tokenize.data);
-    if (e.good) {
-        printf("okay! outputting module!\n");
-        generator->output_module(e);
-    } else {
-        printf("not good! module bad!\n");
-        printf("%s\n", e.message);
+        // TODO: I don't want to do this right now...
+        std::string module_name_hack;
+        for (auto& c : filename) {
+            if (c == '.') break;
+            module_name_hack += c;
+        }
+        auto e = load_module_from_source(module_name_hack, buffer.data);
+
+        if (e.good) {
+            printf("okay! outputting module!\n");
+            generator->output_module(e);
+        } else {
+            printf("not good! module bad!\n");
+            printf("%s\n", e.message);
+            break;
+        }
+
+        module_names.push_back(generator->get_module_compiled_name(e));
     }
+
+    // generated... now compile all the modules
+    std::string compile_string = "g++ -o test ";
+    for (auto s : module_names) {
+        compile_string += s;
+    }
+
+    printf("calling c compiler\n");
+    os_process_shell_start_and_run_synchronously((char*)compile_string.c_str());
+    printf("enjoy.\n");
+
+
 #endif
     return 0;
 }
