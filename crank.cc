@@ -72,13 +72,13 @@ enum Crank_Declaration_Type {
 
 // simple type system
 enum Crank_Types {
-    TYPE_NUMERIC, // unresolved numeric type. Will be converted as needed.
-    TYPE_BOOLEAN,
+    TYPE_NUMERIC, // unresolved numeric type. Will be converted as needed. 
+    TYPE_BOOLEAN, // NOT IMPLEMENTED?
     TYPE_INTEGER,
     TYPE_FLOAT,
     TYPE_STRINGLITERAL,
-    TYPE_RECORD,
-    TYPE_VOID,
+    TYPE_RECORD, // NOT FULLY IMPLEMENTED
+    TYPE_VOID, // NOT IMPLEMENTED
     TYPE_RENAME, // typedef, this doesn't really have much significance, so I might remove this.
     TYPE_COUNT
 };
@@ -91,6 +91,7 @@ struct Crank_Object_Decl_Base {
     Crank_Type* object_type;
     std::vector<int> array_dimensions; // empty is not an array. -1 means don't care. might be flexible.
     std::string name;
+    bool has_value;
 };
 
 enum Crank_Value_Type {
@@ -167,12 +168,12 @@ struct Crank_Declaration : public Crank_Object_Decl_Base {
     Crank_Value value;
 };
 
-struct Crank_Record_Member : public Crank_Object_Decl_Base {
-};
+// struct Crank_Record_Member : public Crank_Object_Decl_Base {
+// };
 
 struct Crank_Type {
     int type;
-    Crank_Type* rename_of;
+    Crank_Type* rename_of = nullptr;
     std::string name;
     // TODO: for now shove this in here until I figure out how this array thing works.
     std::vector<int> array_dimensions; // empty is not an array. -1 means don't care. might be flexible.
@@ -180,8 +181,9 @@ struct Crank_Type {
     bool is_function;
     std::vector<Crank_Declaration> call_parameters;
 
-    std::vector<Crank_Record_Member> members;
+    std::vector<Crank_Declaration> members;
 };
+
 
 // TODO:
 // - Check array dimension matching
@@ -226,7 +228,7 @@ Crank_Type* register_new_type(
     int type,
     std::vector<int> array_dimensions={},
     std::vector<Crank_Declaration> call_parameters={},
-    bool is_function = true
+    bool is_function = false
 ) {
     global_type_table.push_back(new Crank_Type);
     Crank_Type* result = global_type_table.back();
@@ -293,7 +295,7 @@ Crank_Type* lookup_type(
 
         if (!result) {
             // register the function type.
-            result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters, is_function);
+            result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters, true);
         }
 
         return result;
@@ -451,7 +453,6 @@ Error<Crank_Type_Declaration> read_type_declaration(Tokenizer_State& tokenizer) 
 }
 
 struct Inline_Decl : public Crank_Object_Decl_Base {
-    bool has_value;
     Crank_Value value;
 };
 
@@ -505,15 +506,15 @@ enum Crank_Expression_Operator {
 };
 
 const char* Crank_Expression_Operator_string_table[] = {
-    "not",
-    "negate",
+    "!",
+    "-",
     "property-access",
 
-    "add",
-    "sub",
-    "mul",
-    "div",
-    "mod",
+    "+",
+    "-",
+    "*",
+    "/",
+    "%",
 
     "array-index",
 
@@ -524,20 +525,20 @@ const char* Crank_Expression_Operator_string_table[] = {
     "/=",
     "%=",
 
-    "ne",
-    "eq",
-    "lt",
-    "gt",
-    "lte",
-    "gte",
+    "!=",
+    "==",
+    "<",
+    ">",
+    "<=",
+    ">=",
 
-    "and",
-    "or",
+    "&&",
+    "||",
 
-    "bit-and",
-    "bit-or",
-    "bit-xor",
-    "bit-not",
+    "&",
+    "|",
+    "^",
+    "~",
 
     "count"
 };
@@ -1304,6 +1305,7 @@ Error<Inline_Decl> read_inline_declaration(Tokenizer_State& tokenizer) {
 
     result.array_dimensions = type_entry.value.array_dimensions;
     result.object_type = type; // NOTE? need to check something
+    result.name = name.string;
 
     if (type_entry.value.is_function) {
         printf("This decl is a function!\n");
@@ -1364,7 +1366,7 @@ bool read_record_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
         }
         // or delegates I guess
         // NOTE: function pointer members not working
-        Crank_Record_Member member;
+        Crank_Declaration member;
         member.name             = new_member_decl.name;
         member.array_dimensions = new_member_decl.array_dimensions;
         member.object_type      = new_member_decl.object_type;
@@ -1390,7 +1392,7 @@ Error<Crank_Declaration> parse_typedef(Tokenizer_State& tokenizer) {
         if (!type_entry.good) return Error<Crank_Declaration>::fail(type_entry.message);
 
         Crank_Declaration typedecl;
-        typedecl.decl_type = DECL_OBJECT;
+        typedecl.decl_type = DECL_TYPE;
         typedecl.object_type = lookup_type(determiner.string);
         typedecl.name = name.string;
         typedecl.array_dimensions = type_entry.value.array_dimensions;
@@ -1413,7 +1415,7 @@ Error<Crank_Declaration> parse_typedef(Tokenizer_State& tokenizer) {
         tokenizer.read_next();
 
         Crank_Declaration typedecl;
-        typedecl.decl_type = DECL_OBJECT;
+        typedecl.decl_type = DECL_TYPE;
         typedecl.object_type = register_new_type(name.string, TYPE_RECORD);
 
         if (read_record_definition(typedecl.object_type, tokenizer)) {
@@ -1441,7 +1443,7 @@ Error<Crank_Declaration> parse_variable_decl(Tokenizer_State& tokenizer) {
     decl.object_type = inline_decl.value.object_type;
     decl.array_dimensions = inline_decl.value.array_dimensions;
     decl.name = inline_decl.value.name;
-    // do something about 'has value'?
+    decl.has_value = inline_decl.value.has_value;
     decl.value = inline_decl.value.value;
     return Error<Crank_Declaration>::okay(decl);
 }
@@ -1474,10 +1476,15 @@ Error<Crank_Module> load_module_from_source(std::string module_name, std::string
                     if (!new_decl.good) {
                         printf("%s\n", new_decl.message);
                     } else  {
+                        printf("new decl added\n");
                         module.decls.push_back(new_decl);
                     }
                     assert(tokenizer.read_next().type == TOKEN_SEMICOLON);
                 }
+            } break;
+            case TOKEN_NONE: {
+                tokenizer.read_next();
+                // safe, is EOF
             } break;
             default: {
                 /* TODO better error message? */
@@ -1498,6 +1505,161 @@ void register_default_types() {
     register_new_type("strlit",TYPE_STRINGLITERAL);
     register_new_type("void",  TYPE_VOID);
 }
+
+// it's really an interface.
+class Crank_Codegen {
+protected:
+    // implement these as separate passes.
+    virtual void output_preamble(FILE* output) = 0;
+    virtual void output_import(FILE* output, Crank_Module* module) = 0;
+    virtual void output_type(FILE* output, Crank_Type* type) = 0;
+
+    // we're going to separate function declaration passes
+    // and non function declaration passes because some language transpile
+    // targets don't have out of order initialization!
+
+    virtual void output_value(FILE* output, Crank_Value* value) = 0;
+    virtual void output_unary_expression(FILE* output, Crank_Expression* expression) = 0;
+    virtual void output_binary_expression(FILE* output, Crank_Expression* expression) = 0;
+
+    virtual void output_declaration(FILE* output, Crank_Declaration* decl) = 0;
+    virtual void output_function_declaration(FILE* output, Crank_Declaration* decl) = 0;
+
+    virtual void output_statement(FILE* output, Crank_Statement* expression) = 0;
+
+    void output_expression(FILE* output, Crank_Expression* expression) {
+        if (expression) {
+            switch (expression->type) {
+                case EXPRESSION_VALUE: {
+                    output_value(output, &expression->value);
+                } break;
+                case EXPRESSION_UNARY: {
+                    output_unary_expression(output, expression);
+                } break;
+                case EXPRESSION_BINARY: {
+                    output_binary_expression(output, expression);
+                } break;
+            }
+        }
+    }
+
+    virtual std::string get_module_compiled_name(Crank_Module& module) = 0;
+public:
+    Crank_Codegen() {}
+    ~Crank_Codegen() {}
+    void output_module(Crank_Module& module) {
+        auto module_file_name = get_module_compiled_name(module);
+        FILE* file = fopen(module_file_name.c_str(), "wb+");
+
+        printf("Outputting preamble\n");
+        output_preamble(file);
+
+        printf("Outputting imports!\n");
+        for (auto& import : module.imports) {
+            output_import(file, import);
+        }
+
+        printf("Outputting declarations!\n");
+        for (auto& decl : module.decls) {
+            output_declaration(file, &decl);
+        }
+
+        for (auto& decl : module.decls) {
+            if (decl.object_type->is_function) {
+                printf("outputting function decl!\n");
+                output_function_declaration(file, &decl);
+            }
+        }
+
+        fclose(file);
+    }
+};
+
+/*
+  NOTE: function expressions need an extra step,
+  but this will be handled later...
+
+  (IE: anonymous functions will have to be added to declarations posthumously.)
+*/
+class Crank_Codegen_Partial_CStyleLanguage : public Crank_Codegen {
+public:
+    Crank_Codegen_Partial_CStyleLanguage() {}
+    ~Crank_Codegen_Partial_CStyleLanguage() {}
+protected:
+    void output_value(FILE* output, Crank_Value* value) {
+        if (value->value_type == VALUE_TYPE_SYMBOL) {
+            fprintf(output, "%s", value->symbol_name.c_str());
+        } else {
+            // NOTE: TODO ON ARRAYS
+            // AND FUNCTIONS?
+            
+            // Object Literal;
+            if (value->array_elements.size()) {
+                fprintf(output, "{");
+                for (int i = 0; i < value->array_elements.size(); ++i) {
+                    output_value(output, &value->array_elements[i]);
+                    if (i+1 >= value->array_elements.size()) {
+                        
+                    } else {
+                        fprintf(output, ", ");
+                    }
+                }
+                fprintf(output, "}");
+            } else {
+                auto typeof_object = value->type;
+                switch (typeof_object->type) {
+                    case TYPE_NUMERIC: {
+                        // ???
+                    } break;
+                    case TYPE_BOOLEAN: {
+                        if (value->int_value) {
+                            fprintf(output, "true");
+                        } else {
+                            fprintf(output, "true");
+                        }
+                    } break;
+                    case TYPE_INTEGER: {
+                        fprintf(output, "%d", value->int_value);
+                    } break;
+                    case TYPE_FLOAT: {
+                        fprintf(output, "%f", value->float_value);
+                    } break;
+                    case TYPE_STRINGLITERAL: {
+                        fprintf(output, "%s", value->string_value.c_str());
+                    } break;
+                    case TYPE_RECORD: {
+                        // TODO: parse
+                    } break;
+                    case TYPE_VOID: {
+                    
+                    } break;
+                }
+            }
+        }
+    }
+    void output_unary_expression(FILE* output, Crank_Expression* expression) {
+        if (expression) {
+            fprintf(output, "%s", Crank_Expression_Operator_string_table[expression->operation]);
+            output_expression(output, expression->unary.value);
+        }
+    }
+    void output_binary_expression(FILE* output, Crank_Expression* expression) {
+        if (expression->operation == OPERATOR_ARRAY_INDEX) {
+            output_expression(output, expression->binary.first);
+            fprintf(output, "[");
+            output_expression(output, expression->binary.second);
+            fprintf(output, "]");
+        } else if (expression->operation == OPERATOR_PROPERTY_ACCESS) {
+            output_expression(output, expression->binary.first);
+            fprintf(output, ".", Crank_Expression_Operator_string_table[expression->operation]);
+            output_expression(output, expression->binary.second);
+        } else {
+            output_expression(output, expression->binary.first);
+            fprintf(output, "%s", Crank_Expression_Operator_string_table[expression->operation]);
+            output_expression(output, expression->binary.second);
+        }
+    }
+};
 
 #include "cplusplus_codegen.cc"
 
@@ -1566,8 +1728,17 @@ x : int = 5;
     #else
     
     File_Buffer test_to_tokenize = File_Buffer("simplevars.crank");
+
+    Crank_Codegen* generator = new CPlusPlusCodeGenerator();
+
     auto e = load_module_from_source("simplevars", test_to_tokenize.data);
-    printf("%s\n", e.message);
+    if (e.good) {
+        printf("okay! outputting module!\n");
+        generator->output_module(e);
+    } else {
+        printf("not good! module bad!\n");
+        printf("%s\n", e.message);
+    }
 #endif
     return 0;
 }
