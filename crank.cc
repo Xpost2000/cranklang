@@ -1806,16 +1806,17 @@ x: int = 4;
         module_names.push_back(generator->get_module_compiled_name(e));
     }
 
-    // generated... now compile all the modules
-    std::string compile_string = "g++ -o test ";
-    for (auto s : module_names) {
-        compile_string += s;
+    if (module_names.size()) {
+        // generated... now compile all the modules
+        std::string compile_string = "g++ -o test ";
+        for (auto s : module_names) {
+            compile_string += s;
+        }
+
+        printf("calling c compiler\n");
+        os_process_shell_start_and_run_synchronously((char*)compile_string.c_str());
+        printf("enjoy.\n");
     }
-
-    printf("calling c compiler\n");
-    os_process_shell_start_and_run_synchronously((char*)compile_string.c_str());
-    printf("enjoy.\n");
-
 
 #endif
     return 0;
