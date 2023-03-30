@@ -108,10 +108,6 @@ enum Crank_Object_Literal_Decl_Type {
 // NOTE: fat struct.
 
 struct Crank_Statement;
-struct Crank_Function_Body {
-    std::vector<Crank_Statement*> body;
-};
-
 struct Crank_Value {
     int value_type; // This is just the obligatory "parse" information
     Crank_Type* type; // This is the actual discriminator for the value type.
@@ -134,7 +130,7 @@ struct Crank_Value {
     // used for functions
     bool is_function_call;
     std::vector<Crank_Value> call_parameters;
-    Crank_Function_Body body;
+    Crank_Statement* body;
     // TODO: add list of statements.
     // functions are theoretically values in Crank.
 
@@ -180,9 +176,13 @@ struct Crank_Type {
     std::string name;
     // TODO: for now shove this in here until I figure out how this array thing works.
     std::vector<int> array_dimensions; // empty is not an array. -1 means don't care. might be flexible.
+    std::vector<Crank_Declaration> call_parameters;
     std::vector<Crank_Record_Member> members;
 };
 
+// TODO:
+// - Check array dimension matching
+// - Check function matching!
 bool crank_type_match(Crank_Type* a, Crank_Type* b) {
     // Since I intern Crank_Types this is always okay.
     if (a == b) {
@@ -210,6 +210,7 @@ bool crank_type_match(Crank_Type* a, Crank_Type* b) {
     }
 
     if (a->array_dimensions.size() > 0 && b->array_dimensions.size() > 0) {
+        // I think I forgot to finish this.
     }
 
     return false;
@@ -217,15 +218,27 @@ bool crank_type_match(Crank_Type* a, Crank_Type* b) {
 
 // globally registered types TODO: make this per module. I'm just doing this to make resolution easy until I figure out what I'm doing.
 std::vector<Crank_Type*> global_type_table; // too many allocations, but I don't want to deal with pointer fix up right now.
-Crank_Type* register_new_type(std::string_view name, int type, std::vector<int> array_dimensions={}) {
+Crank_Type* register_new_type(
+    std::string_view name,
+    int type,
+    std::vector<int> array_dimensions={},
+    std::vector<Crank_Declaration> call_parameters={}
+) {
     global_type_table.push_back(new Crank_Type);
     Crank_Type* result = global_type_table.back();
     result->type = type;
     result->name = std::string(name);
     result->array_dimensions = array_dimensions;
+    result->call_parameters  = call_parameters;
     return result;
 }
-Crank_Type* lookup_type(std::string_view name, std::vector<int> array_dimensions={}) {
+
+// TODO: Function type checking
+Crank_Type* lookup_type(
+    std::string_view name,
+    std::vector<int> array_dimensions={},
+    std::vector<Crank_Declaration> call_parameters={}
+) {
     // NOTE: when looking up an array variant
     //       type.
     //
@@ -241,6 +254,44 @@ Crank_Type* lookup_type(std::string_view name, std::vector<int> array_dimensions
     // exists first.
 
     // Do a more thorough type check.
+    if (call_parameters.size() > 0) { // remarkably similar to the array case.
+        Crank_Type* result = nullptr;
+        for (auto type : global_type_table) {
+            if (type->name == name) {
+                result = type;
+                // still need to check array size just in case.
+                if (type->array_dimensions.size() == array_dimensions.size()) {
+                    for (int i = 0; i < type->array_dimensions.size(); ++i) {
+                        if (type->array_dimensions[i] != array_dimensions[i]) {
+                            result = nullptr;
+                        }
+                    }
+                } else {
+                    result = nullptr;
+                }
+
+                // check types.
+                if (type->call_parameters.size() == call_parameters.size()) {
+                    for (int i = 0; i < type->call_parameters.size(); ++i) {
+                        auto& type_param_a = type->call_parameters[i];
+                        auto& type_param_b = call_parameters[i];
+
+                        if (type_param_b.object_type != type_param_a.object_type) {
+                            result = nullptr;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!result) {
+            // register the function type.
+            result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters);
+        }
+
+        return result;
+    }
+
     if (array_dimensions.size() > 0) {
         if (lookup_type(name)) {
             Crank_Type* result = nullptr;
@@ -268,7 +319,7 @@ Crank_Type* lookup_type(std::string_view name, std::vector<int> array_dimensions
                 // NOTE:
                 // Arrays share the same "base value_type" as their
                 // scalar counterpart.
-                result = register_new_type(name, lookup_type(name)->type, array_dimensions);
+                result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters);
             }
 
             return result;
@@ -297,6 +348,7 @@ struct Crank_Module {
 struct Crank_Type_Declaration { // NOTE: for semantic analysis. Not doing type system things here!
     std::string name;
     std::vector<int> array_dimensions;
+    std::vector<Crank_Declaration> call_parameters;
 };
 
 // -1 is bad
@@ -332,11 +384,14 @@ int read_array_specifier(Tokenizer_State& tokenizer, int* out) {
 }
 
 Error<Crank_Type_Declaration> read_type_declaration(Tokenizer_State& tokenizer) {
+    Error<Crank_Declaration> parse_variable_decl(Tokenizer_State& tokenizer);
+
     auto name = tokenizer.read_next();
     if (name.type != TOKEN_SYMBOL) return Error<Crank_Type_Declaration>::fail("Bad type declaration.");
 
     std::vector<int> array_dimensions;
 
+    // parse an array type
     while (true) {
         int current_dimension = -1;
         int read_result = read_array_specifier(tokenizer, &current_dimension);
@@ -349,10 +404,27 @@ Error<Crank_Type_Declaration> read_type_declaration(Tokenizer_State& tokenizer) 
         }
     }
 
+    // parse a function type
+    std::vector<Crank_Declaration> call_parameters;
+    if (tokenizer.peek_next().type == TOKEN_LEFT_PARENTHESIS) {
+        tokenizer.read_next();
+        while (tokenizer.peek_next().type != TOKEN_RIGHT_PARENTHESIS) {
+            auto decl = parse_variable_decl(tokenizer);
+
+            if (decl.good) {
+                call_parameters.push_back(decl.value);
+                assert(tokenizer.peek_next().type == TOKEN_COMMA && "Comma separated params list!");
+            }
+        }
+        tokenizer.read_next();
+    }
+
+    if (call_parameters.size()) printf("Function decl found with %d parameters\n", call_parameters.size());
     Crank_Type_Declaration result;
 
     result.name = name.string;
     result.array_dimensions = array_dimensions;
+    result.call_parameters  = call_parameters;
 
     return Error<Crank_Type_Declaration>::okay(result);
 }
@@ -533,6 +605,8 @@ Crank_Expression* value_expression(Crank_Value value) {
 }
 
 Error<Inline_Decl> read_inline_declaration(Tokenizer_State& tokenizer);
+
+// NOTE: consider read function value!
 Error<Crank_Value> read_value(Tokenizer_State& tokenizer);
 
 // builds an expression tree.
@@ -1187,40 +1261,57 @@ Error<Inline_Decl> read_inline_declaration(Tokenizer_State& tokenizer) {
 
     auto type_entry = read_type_declaration(tokenizer);
     assert(type_entry.good && "Bad type entry?");
-    auto type = lookup_type(type_entry.value.name, type_entry.value.array_dimensions);
+    auto type = lookup_type(
+        type_entry.value.name,
+        type_entry.value.array_dimensions,
+        type_entry.value.call_parameters
+    );
     assert(type && "Type not found! Cannot resolve!");
 
-    // TODO: array specifier.
-
     result.array_dimensions = type_entry.value.array_dimensions;
+    result.object_type = type; // NOTE? need to check something
 
-    if (tokenizer.peek_next().type == TOKEN_EQUAL) {
-        tokenizer.read_next();
-        auto value = read_value(tokenizer);
-        assert(value.good);
-        result.has_value = true;
-        result.value     = value;
-
-        // assert that the evaluated type should match the type we
-        // found.
-
-        // NOTE: arrays have to be typed here. We'll enforce a type check on all
-        // elements which is kind of slow since I should've tested it while parsing?
-        // however the code is not organized to allow this for now.
-        if (result.value.array_elements.size() > 0) {
-            printf("Array type checking\n");
-            result.value.type = type;
-
-            std::vector<int> array_dimensions = result.value.type->array_dimensions;
-            assert(do_array_typecheck(type, array_dimensions, value.value.array_elements) && "check the message.");
+    if (type_entry.value.call_parameters.size()) {
+        printf("This decl is a function!\n");
+        auto function_statement = parse_any_statement(tokenizer);
+        if (function_statement) {
+            printf("function declaration!\n");
+            result.has_value = true;
+            result.value.body = function_statement;
+        } else {
+            result.has_value = false;
+            printf("might be function pointer!\n");
         }
+    } else {
+        printf("This decl is a variable!\n");
+        if (tokenizer.peek_next().type == TOKEN_EQUAL) {
+            tokenizer.read_next();
+            auto value = read_value(tokenizer);
+            assert(value.good);
+            result.has_value = true;
+            result.value     = value;
 
-        assert(value.value.type && "Value does not have a type for some reason?");
+            // assert that the evaluated type should match the type we
+            // found.
 
-        // This is not being done yet.
+            // NOTE: arrays have to be typed here. We'll enforce a type check on all
+            // elements which is kind of slow since I should've tested it while parsing?
+            // however the code is not organized to allow this for now.
+            if (result.value.array_elements.size() > 0) {
+                printf("Array type checking\n");
+                result.value.type = type;
 
-        // NOTE: for arrays this is loser. As long as long as it can
-        // be cast to that thing.
+                std::vector<int> array_dimensions = result.value.type->array_dimensions;
+                assert(do_array_typecheck(type, array_dimensions, value.value.array_elements) && "check the message.");
+            }
+
+            assert(value.value.type && "Value does not have a type for some reason?");
+
+            // This is not being done yet.
+
+            // NOTE: for arrays this is loser. As long as long as it can
+            // be cast to that thing.
+        }
     }
 
     return Error<Inline_Decl>::okay(result);
@@ -1237,6 +1328,8 @@ bool read_record_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
         if (new_member_decl.has_value) {
             printf("Sorry! No default value yet!\n");
         }
+        // or delegates I guess
+        // NOTE: function pointer members not working
         Crank_Record_Member member;
         member.name             = new_member_decl.name;
         member.array_dimensions = new_member_decl.array_dimensions;
