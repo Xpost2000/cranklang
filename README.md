@@ -1,7 +1,7 @@
 # CrankLang
 
-NOTE: most of this is actually just a "TODO list" right now, although at the moment a subset of
-the language features compile.
+**NOTE: most of this is actually just a "TODO list" right now, although at the moment a subset of
+the language features compile.**
 
 This is a basic alternate C-syntax sort of language.
 
