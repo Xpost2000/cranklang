@@ -1,11 +1,16 @@
 /*
-  A small programming language interpreter/transpiler
+  A small programming language interpreter/transpiler. It's not really efficient it's just to figure out
+  how to write a language by any means necessary. So there's an allocation festival thanks to all the std::string
+  I use.
 
-  3/29/2023:
+  3/29/2023: (wow it's been a hot minute since I've looked at this 4/21/2023)
 
   NOTE: I'm not deleting anything here because
   the OS will reclaim all memory, and it's only running until
   the compiler finishes. It's not real time so that's fine.
+
+  OPTIONAL/TODO: I would like better error reporting logic, but this isn't really about
+  that (IE: the intent isn't to make a sane language to use, it's just "compiler" practice)
 
   TODO: 
   - Boolean types
@@ -43,10 +48,26 @@
 
   A minimally useful language?
 
+  I need pointers
+
+  Wishlist, I need this to be able to do as much as C can first:
+
   - Array Programming
   - Lambdas/local functions
   - Structure Extension
-  - Basic Generics?
+      struct E {
+        int c; 
+      };
+      struct Z {
+       int a;
+       int b;
+      };
+      struct XY {
+       using Z;
+       using E;
+      };
+
+      This will be interesting to compile into C since I want this to allow for polymorphism in a weird way.
   - Out of order implementation
 
 
@@ -168,6 +189,8 @@ struct Crank_Declaration : public Crank_Object_Decl_Base {
      */
 
     // Used only for DECL_OBJECT
+
+    // This should really be an expression.
     Crank_Value value;
 };
 
@@ -1525,6 +1548,7 @@ Error<Crank_Module> load_module_from_source(std::string module_name, std::string
 
     return Error<Crank_Module>::okay(module);
 }
+
 void register_default_types() {
     register_new_type("int",   TYPE_INTEGER);
     register_new_type("float", TYPE_FLOAT);
