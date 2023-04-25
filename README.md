@@ -3,6 +3,10 @@
 **NOTE: most of this is actually just a "TODO list" right now, although at the moment a subset of
 the language features compile.**
 
+**NOTE: One fun target goal, is to get this to be "self-hosting". While I still depend on a C compiler since I'm
+not going to pull in LLVM and writing my own native codegen is kind of painful, I'll consider being able to rewrite the compiler
+in Crank to be a cool goal :)**
+
 This is a basic alternate C-syntax sort of language. It's an exercise in writing parsers and figuring
 out how to write compilers.
 

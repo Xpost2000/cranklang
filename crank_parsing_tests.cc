@@ -7,7 +7,7 @@
  */
 
 // I am expecting a boolean expression statement.
-void parse_statement_boolean() {
+void parse_statements() {
     {
         char* test_parse =
             R"(
@@ -24,6 +24,25 @@ true;
         char* test_parse =
             R"(
 false;
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(t && "This should at least pass parsing at minimum.");
+        _debug_print_statement(t);
+    }
+    printf("\n");
+    {
+        char* test_parse =
+            R"(
+switch 4 {
+   case 5:
+   case 6:
+   case 7:
+     break;
+   default:
+   break;
+}
 )";
         printf("Parsing: %s\n", test_parse);
         Tokenizer_State tokenizer(test_parse);
@@ -212,7 +231,7 @@ void typecheck_matching() {
 
 void run_all_tests() {
     typecheck_matching();
-    parse_statement_boolean();
+    parse_statements();
     parse_object_literal();
     parse_declaration();
 }

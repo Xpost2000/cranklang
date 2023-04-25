@@ -909,18 +909,39 @@ enum Crank_Statement_Type {
     STATEMENT_IF,
     STATEMENT_WHILE,
     STATEMENT_RETURN,
+
+    STATEMENT_SWITCH,
+    STATEMENT_CONTINUE,
+    STATEMENT_BREAK,
+
     STATEMENT_COUNT
 };
 const char* Crank_Statement_Type_string_table[] = {
-    "block",
-    "declaration",
-    "expression",
-    "if-statement",
-    "while-statement",
-    "return-statement",
+    [STATEMENT_BLOCK]       = "block",
+    [STATEMENT_DECLARATION] = "declaration",
+    [STATEMENT_EXPRESSION]  = "expression",
+    [STATEMENT_IF]          = "if-statement",
+    [STATEMENT_WHILE]       = "while-statement",
+    [STATEMENT_RETURN]      = "return-statement",
+
+    [STATEMENT_SWITCH]      = "switch-statement",
+    [STATEMENT_CONTINUE]      = "continue-statement",
+    [STATEMENT_BREAK]      = "break-statement",
 };
 
-// NOTE: might change soon.
+// This allows fall through.
+// NOTE: 
+//  this should compile into a normal switch statement when possible
+//  **IF AND ONLY IF**: I determine that the entire statement has
+//  **CONSTANT** clauses.
+//
+// Otherwise it will compile as a chain of if_else with ors to simulate
+// fall through.
+struct Crank_Statement_Switch {
+    Crank_Expression* condition;
+    // std::vector<Case> terms;
+};
+
 struct Crank_Statement_If {
     Crank_Expression* condition;
     Crank_Statement* true_branch;
@@ -950,11 +971,19 @@ struct Crank_Statement_Block {
 
 struct Crank_Statement {
     int type;
+    // NOTE:
+    // I would prefer to union this
+    // but the std::vector stuff makes it complicated.
+    // I might just make my own simple_vector or Array<T>
+    // in order to allow union types...
+    //
+    // Since std::vector is not trivially constructable
     Crank_Statement_If          if_statement;
     Crank_Statement_While       while_statement;
     Crank_Statement_Return      return_statement;
     Crank_Statement_Expression  expression_statement;
     Crank_Statement_Declaration declaration_statement;
+    Crank_Statement_Switch      switch_statement;
     Crank_Statement_Block       block_statement; // or a compound statement
 };
 
@@ -963,6 +992,7 @@ Crank_Statement* parse_block_statement(Tokenizer_State& tokenizer);
 Crank_Statement* parse_if_statement(Tokenizer_State& tokenizer);
 Crank_Statement* parse_while_statement(Tokenizer_State& tokenizer);
 Crank_Statement* parse_return_statement(Tokenizer_State& tokenizer);
+Crank_Statement* parse_switch_statement(Tokenizer_State& tokenizer);
 Crank_Statement* parse_expression_statement(Tokenizer_State& tokenizer);
 Crank_Statement* parse_declaration_statement(Tokenizer_State& tokenizer);
 
@@ -1037,6 +1067,30 @@ Crank_Statement* parse_while_statement(Tokenizer_State& tokenizer) {
 
     return nullptr;
 }
+
+#if 0
+Crank_Statement* parse_switch_statement(Tokenizer_State& tokenizer) {
+    auto switch_symbol = tokenizer.peek_next();
+    if (switch_symbol.type == TOKEN_SYMBOL) {
+        if (switch_symbol.string == "switch") {
+            tokenizer.read_next();
+
+            auto condition = parse_expression(tokenizer);
+
+            Crank_Statement* switch_statement = new Crank_Statement;
+            switch_statement->type = STATEMENT_SWITCH;
+            switch_statement->switch_statement.condition = condition;
+
+            // NOTE: ... hmm turns out a switch statement
+            // can have many implications. Let me come back to this
+            // one.
+            // switch body
+
+            return switch_statement;
+        }
+    }
+}
+#endif
 
 Crank_Statement* parse_if_statement(Tokenizer_State& tokenizer) {
     auto if_symbol = tokenizer.peek_next();
