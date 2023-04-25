@@ -3,6 +3,8 @@
 **NOTE: most of this is actually just a "TODO list" right now, although at the moment a subset of
 the language features compile.**
 
+**Wow, this is the only project I currently have with any unit testing. Since it's kind of important for this at least.**
+
 This is a basic alternate C-syntax sort of language.
 
 I don't really advise using this because it's a toy language but at least you

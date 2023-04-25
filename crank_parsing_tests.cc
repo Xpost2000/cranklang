@@ -69,7 +69,24 @@ void parse_declaration() {
     // with an expression, since that's the other thing that's kinda busted right now
 }
 
+// this is arguably the most important test
+// since parsing is more obvious, if it's broken.
+void typecheck_matching() {
+    auto record_type1 = register_new_type("FictionalType1", TYPE_RECORD);
+    auto record_type2 = register_new_type("FictionalType2", TYPE_RECORD);
+
+    {
+        printf("Check sanity\n");
+        assert(crank_type_match(lookup_type("int"), lookup_type("int")) && "Cannot check type with itself?");
+        assert(crank_type_match(lookup_type("bool"), lookup_type("bool")) && "Cannot check type with itself?");
+        assert(!crank_type_match(lookup_type("bool"), lookup_type("int")) && "This should not match.");
+        assert(!crank_type_match(lookup_type("int"), lookup_type("strlit")) && "This should not match.");
+        assert(!crank_type_match(lookup_type("FictionalType1"), lookup_type("FictionalType2")) && "This should not match.");
+    }
+}
+
 void run_all_tests() {
+    typecheck_matching();
     parse_statement_boolean();
     parse_object_literal();
     parse_declaration();
