@@ -43,7 +43,8 @@ void parse_object_literal() {
 }
 
 void parse_declaration() {
-    
+    // TODO: need to check for what happens when I parse a declaration
+    // with an expression, since that's the other thing that's kinda busted right now
 }
 
 void run_all_tests() {

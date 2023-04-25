@@ -1229,12 +1229,12 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
             auto next = tokenizer.peek_next();
             value.value_type = VALUE_TYPE_SYMBOL;
             if (next.type == TOKEN_LEFT_CURLY_BRACE) {
+                // object literal
                 /*
                  * NOTE: just keep it like this to be simple, so it's kinda like Go.
                  * Don't need a fancy parser. Need a working language.
                  */
                 tokenizer.read_next();
-                // object literal
                 value.value_type = VALUE_TYPE_LITERAL;
                 value.type = lookup_type(first.string);
                 // TODO causes issues with non-parenthesized things
@@ -1307,6 +1307,9 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
             }
             tokenizer.read_next();
             return Error<Crank_Value>::okay(value);
+        } break;
+        default: {
+            assert(0 && "The parser should not be reading any other token type!");
         } break;
     }
 
