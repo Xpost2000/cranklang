@@ -1565,68 +1565,14 @@ void register_default_types() {
 
 #include "os_process_win32.c"
 
+#include "crank_parsing_tests.cc"
+
 int main(int argc, char** argv){
     register_default_types();
 
-    // Tokenizer_State tokenizer("2 == (4 != 5)");
-    // char* test_parse = "3 * ([1, 2, 3] + [4, 5, 7])";
-    // char* test_parse = "test_function() * 5 + test_function4(4, 4, 6)";
-
-    // NOTE: type checking expressions like this are
-    // a bit harder. Since we can possibly be accessing
-    // properties. Some types will need built in properties
-    // and will be handled accordingly...
-    
-    // char* test_parse = "test.x + hello.y";
-    // char* test_parse = "test[0][2][4]";
-    // char* test_parse = "test[0][1]";
-    // char* test_parse = "(test[0][1+1]).yz + hello.xyz";
-
-    // I wish I had a proper test suite for these cases
-    // but building my own tree is a little annoying.
-    // TODO
-    // char* test_parse = "A && B || B && D";
-    // char* test_parse = "A & B | B & D ^ 1234";
-    // char* test_parse = ";";
-#if 0
-#if 0
-    char* test_parse = "test(3)";
-    // char* test_parse = "test[0]";
-    // char* test_parse = "0";
-    // char* test_parse = "test.x";
-    printf("Parsing: %s\n", test_parse);
-    Tokenizer_State tokenizer(test_parse);
-    auto t = parse_expression(tokenizer);
-    if (t) {
-        _debug_print_expression_tree(t);
-    } else {
-        printf("no expression!\n");
-    }
+#if 1
+    parse_statement_boolean();
 #else
-    // char* test_parse = "{ { x = 4; return 5; } y.z.x = 6; return 123; }";
-    // char* test_parse = "{ x = 4; y = 4; return 6; }";
-    // char* test_parse = "test[0]";
-    // char* test_parse = "0";
-    char* test_parse =
-        R"(
-x: int = 4;
-)";
-    // printf("Parsing: %s\n", test_parse);
-    printf("Parsing: %s\n", test_parse);
-    Tokenizer_State tokenizer(test_parse);
-    auto t = parse_any_statement(tokenizer);
-    // auto t = parse_block_statement(tokenizer);
-
-    if (t) {
-        _debug_print_statement(t);
-    } else {
-        printf("no statements!!\n");
-    }
-#endif
-    printf("hi, did you crash\n");
-
-#else
-    
     std::vector<std::string> module_names;
     Crank_Codegen* generator = new CPlusPlusCodeGenerator();
     for (int i = 1; i < argc; ++i) {
@@ -1665,6 +1611,6 @@ x: int = 4;
         printf("enjoy.\n");
     }
 
-#endif
     return 0;
+#endif
 }
