@@ -152,7 +152,49 @@ void typecheck_matching() {
                    lookup_type("int", {}, {}, true),
                    lookup_type("int", {}, {}, true)
                ) && "Same function signature. Should match");
-        // TODO
+
+        // function returning array
+        assert(crank_type_match(
+                   lookup_type("int", {-1}, {}, true),
+                   lookup_type("int", {-1}, {}, true)
+               ) && "Same function signature. Should match");
+
+        // Although like I said above, this is case that I would be okay with "type promoting".
+        // However type promoting isn't the type matcher's problem. This situation
+        assert(!crank_type_match(
+                   lookup_type("int", {4}, {}, true),
+                   lookup_type("int", {-1}, {}, true)
+               ) && "Function signature differs. Should not match! I would type promote though.");
+        assert(!crank_type_match(
+                   lookup_type("int", {-1}, {}, true),
+                   lookup_type("int", {4}, {}, true)
+               ) && "Function signature differs. Should not match!");
+
+        assert(!crank_type_match(
+                   lookup_type("bool", {}, {}, true),
+                   lookup_type("int", {}, {}, true)
+               ) && "Function signature differs. Should not match!");
+
+        assert(!crank_type_match(
+                   lookup_type("int", {},
+                               {
+                                   make_uninitialized_object_decl(lookup_type("int"), "namesdonotmatter"),
+                                   make_uninitialized_object_decl(lookup_type("float"), "namesdonotmatter1")
+                               }, true),
+                   lookup_type("int", {}, {}, true)
+               ) && "Function signature differs. Should not match!");
+        assert(!crank_type_match(
+                   lookup_type("int", {},
+                               {
+                                   make_uninitialized_object_decl(lookup_type("int"), "namesdonotmatter"),
+                                   make_uninitialized_object_decl(lookup_type("float"), "namesdonotmatter1")
+                               }, true),
+                   lookup_type("int", {},
+                               {
+                                   make_uninitialized_object_decl(lookup_type("int"), "himynameis"),
+                                   make_uninitialized_object_decl(lookup_type("float"), "thisisadifferentname")
+                               }, true)
+               ) && "Same function signature. Should match");
     }
 }
 
