@@ -197,8 +197,16 @@ struct Crank_Declaration : public Crank_Object_Decl_Base {
     Crank_Value value;
 };
 
-// struct Crank_Record_Member : public Crank_Object_Decl_Base {
-// };
+// mostly needed for unit testing stuff...
+Crank_Declaration make_uninitialized_object_decl(Crank_Type* type, std::string name, std::vector<int> array_dimensions={}) {
+    Crank_Declaration result = {};
+    result.decl_type = DECL_OBJECT;
+    result.object_type = type;
+    result.name = name;
+    result.array_dimensions = array_dimensions;
+    result.has_value = false;
+    return result;
+}
 
 struct Crank_Type {
     int type;
@@ -271,6 +279,20 @@ Crank_Type* register_new_type(
   NOTE: How do I consider pointers vs arrays... That'll be something
   to look forward to I guess.
 */
+
+/*
+ * NOTE: if looking up a function type or array type, it will
+ * also register the new type. This is to simplify the code writing
+ * since they are "derivative" types which I don't think justify having
+ * to produce an explicit registration.
+ *
+ * This means that you don't have to typedef function pointers. Any compatible
+ * function pointer according to the type system should just work. Of course when
+ * transpiling to C/C++... Well that's a whole different problem isn't it :)
+ *
+ * I need to check the call_parameters to ensure that the declarations
+ * I make are legal (We should not be allowed to declare a new DECL_TYPE)
+ */
 Crank_Type* lookup_type(
     // NOTE: should make this type-declaration but okay
     std::string_view name,

@@ -147,6 +147,11 @@ void typecheck_matching() {
 
     {
         printf("Function type checking.\n");
+
+        assert(crank_type_match(
+                   lookup_type("int", {}, {}, true),
+                   lookup_type("int", {}, {}, true)
+               ) && "Same function signature. Should match");
         // TODO
     }
 }
