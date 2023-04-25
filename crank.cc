@@ -219,6 +219,8 @@ struct Crank_Type {
 // - Check function matching!
 bool crank_type_match(Crank_Type* a, Crank_Type* b) {
     // Since I intern Crank_Types this is always okay.
+    printf("Crank_Type a (%p) (name: %s typedef=%p array_dim(n=%d))\n", a, a->name.c_str(), a->rename_of, a->array_dimensions.size());
+    printf("Crank_Type b (%p) (name: %s typedef=%p array_dim(n=%d))\n", b, b->name.c_str(), b->rename_of, b->array_dimensions.size());
     if (a == b) {
         return true;
     }
@@ -340,7 +342,9 @@ Crank_Type* lookup_type(
     }
 
     if (array_dimensions.size() > 0) {
+        printf("looking up array\n");
         if (lookup_type(name)) {
+            printf("found base type\n");
             Crank_Type* result = nullptr;
             for (auto type : global_type_table) {
                 if (type->name == name) {
@@ -354,6 +358,8 @@ Crank_Type* lookup_type(
                     } else {
                         result = nullptr;
                     }
+
+                    if (result) { break; }
                 }
             }
 
