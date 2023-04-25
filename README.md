@@ -3,9 +3,8 @@
 **NOTE: most of this is actually just a "TODO list" right now, although at the moment a subset of
 the language features compile.**
 
-**Wow, this is the only project I currently have with any unit testing. Since it's kind of important for this at least.**
-
-This is a basic alternate C-syntax sort of language.
+This is a basic alternate C-syntax sort of language. It's an exercise in writing parsers and figuring
+out how to write compilers.
 
 I don't really advise using this because it's a toy language but at least you
 can keep the C++ code it compiles if something really goes south.
