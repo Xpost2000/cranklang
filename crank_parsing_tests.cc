@@ -41,7 +41,7 @@ void parse_object_literal() {
     {
         char* test_parse =
             R"(
-StructType { 1, 2, 3, 4, 5, 6, };
+Record { 1, 2, 3, 4, 5, 6, };
 )";
         printf("Parsing: %s\n", test_parse);
         Tokenizer_State tokenizer(test_parse);
@@ -54,7 +54,7 @@ StructType { 1, 2, 3, 4, 5, 6, };
     {
         char* test_parse =
             R"(
-StructType { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, };
+Record { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, };
 )";
         printf("Parsing: %s\n", test_parse);
         Tokenizer_State tokenizer(test_parse);

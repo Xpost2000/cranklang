@@ -169,13 +169,12 @@ struct Crank_Object_Named_Value {
     std::string name;
     Crank_Value value;
 };
+
 // Can only be one or another, cannot be both.
 struct Crank_Object_Literal {
     int type;
-    union {
-        std::vector<Crank_Object_Named_Value> named_values;
-        std::vector<Crank_Value> values;
-    };
+    std::vector<Crank_Object_Named_Value> named_values;
+    std::vector<Crank_Value> values;
 };
 
 // NOTE: declarations are mainly toplevel objects.
@@ -901,6 +900,9 @@ void _debug_print_crank_value(Crank_Value value) {
                     printf("(char \"%c\") ", value.int_value);
                 } else {
                     printf("(unprintable) ");
+                    if (value.type->type == TYPE_RECORD) {
+                        printf("(object-type) ");
+                    }
                 }
             }
         } break;
@@ -1231,14 +1233,26 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
             return Error<Crank_Value>::okay(value);
         } break;
         case TOKEN_SYMBOL: {
+            /*
+              NOTE:
+              Leads to one of the three possibilities
+
+              symbol literal
+              object literal
+              function literal (which requires registering else where)
+            */
+
             printf("Found symbol.\n");
             auto next = tokenizer.peek_next();
             value.value_type = VALUE_TYPE_SYMBOL;
             if (next.type == TOKEN_LEFT_CURLY_BRACE) {
+                printf("Presuming this to be an object literal\n");
                 // object literal
                 /*
                  * NOTE: just keep it like this to be simple, so it's kinda like Go.
                  * Don't need a fancy parser. Need a working language.
+                 *
+                 * This isn't like C++ with initializers. Only for objects.
                  */
                 tokenizer.read_next();
                 value.value_type = VALUE_TYPE_LITERAL;
@@ -1247,13 +1261,64 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
                 // NOTE: I should check if the type is indeed a struct
                 // TODO causes issues with non-parenthesized things
                 // need tochange syntax to avoid conflict
+                Crank_Object_Literal* literal_object = new Crank_Object_Literal;
+                value.literal_value = literal_object;
                 {
                     /* here we go! */
                     // keep reading declarations.
-                    printf("HI THIS IS NOT DONE!");
-                    assert(0 && "HI I'M NOT DONE");
+
+                    auto first = tokenizer.peek_next();
+                    if (first.type == TOKEN_SYMBOL) {
+                        printf("Named literal\n");
+                        literal_object->type = OBJECT_LITERAL_DECL_NAMED;
+
+                        while (tokenizer.peek_next().type != TOKEN_RIGHT_CURLY_BRACE) {
+                            printf("Reading a field\n");
+                            auto field_symbol_token = tokenizer.read_next();
+                            assert(field_symbol_token.type == TOKEN_SYMBOL && "This should be the name of the field!");
+                            auto colon_separator_token = tokenizer.read_next();
+                            assert(colon_separator_token.type == TOKEN_COLON && "This should be a colon!");
+
+                            auto field_value = read_value(tokenizer);
+                            assert(field_value.good && "Error while reading record declaration value!");
+                            literal_object->values.push_back(field_value.value);
+
+                            {
+                                auto comma = tokenizer.peek_next();
+                                // Allows optional trailing comma
+                                if (comma.type == TOKEN_RIGHT_CURLY_BRACE) {
+                                    continue;
+                                } else {
+                                    assert(comma.type == TOKEN_COMMA && "This token must be a comma.");
+                                    tokenizer.read_next();
+                                }
+                            }
+                        }
+                    } else {
+                        printf("Ordered literal\n");
+                        literal_object->type = OBJECT_LITERAL_DECL_ORDERED;
+
+                        while (tokenizer.peek_next().type != TOKEN_RIGHT_CURLY_BRACE) {
+                            printf("Reading a field\n");
+                            auto field_value = read_value(tokenizer);
+                            assert(field_value.good && "Error while reading record declaration value!");
+                            literal_object->values.push_back(field_value.value);
+
+                            {
+                                auto comma = tokenizer.peek_next();
+                                // Allows optional trailing comma
+                                if (comma.type == TOKEN_RIGHT_CURLY_BRACE) {
+                                    continue;
+                                } else {
+                                    assert(comma.type == TOKEN_COMMA && "This token must be a comma.");
+                                    tokenizer.read_next();
+                                }
+                            }
+                        }
+                    }
                 }
                 assert(tokenizer.read_next().type == TOKEN_RIGHT_CURLY_BRACE);
+                return Error<Crank_Value>::okay(value);
             } else {
                 // symbol
                 value.symbol_name = first.string;
@@ -1317,6 +1382,7 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
             return Error<Crank_Value>::okay(value);
         } break;
         default: {
+            printf("Encountered invalid token type for value: %.*s\n", unwrap_string_view(Token_Type_string_table[first.type]));
             assert(0 && "The parser should not be reading any other token type!");
         } break;
     }
