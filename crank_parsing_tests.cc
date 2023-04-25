@@ -13,11 +13,9 @@ void parse_statement_boolean() {
             R"(
 true;
 )";
-        // printf("Parsing: %s\n", test_parse);
         printf("Parsing: %s\n", test_parse);
         Tokenizer_State tokenizer(test_parse);
         auto t = parse_any_statement(tokenizer);
-
         assert(t && "This should at least pass parsing at minimum.");
         _debug_print_statement(t);
     }
@@ -27,19 +25,43 @@ true;
             R"(
 false;
 )";
-        // printf("Parsing: %s\n", test_parse);
         printf("Parsing: %s\n", test_parse);
         Tokenizer_State tokenizer(test_parse);
         auto t = parse_any_statement(tokenizer);
-        // auto t = parse_block_statement(tokenizer);
-
         assert(t && "This should at least pass parsing at minimum.");
         _debug_print_statement(t);
     }
 }
 
 void parse_object_literal() {
-    
+    // fields are not checked yet.
+    auto record_type = register_new_type("Record", TYPE_RECORD);
+
+    // type 1:
+    {
+        char* test_parse =
+            R"(
+StructType { 1, 2, 3, 4, 5, 6, };
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(t && "This should at least pass parsing at minimum.");
+        _debug_print_statement(t);
+    }
+    printf("\n");
+    // type 2:
+    {
+        char* test_parse =
+            R"(
+StructType { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, };
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(t && "This should at least pass parsing at minimum.");
+        _debug_print_statement(t);
+    }
 }
 
 void parse_declaration() {

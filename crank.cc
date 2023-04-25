@@ -5,6 +5,9 @@
 
   3/29/2023: (wow it's been a hot minute since I've looked at this 4/21/2023)
 
+  4/24/2023: Hmm, after a bit of reading I believe it is impertinent that I restructure
+  the "compiler" to only produce an AST that is unchecked...
+
   NOTE: I'm not deleting anything here because
   the OS will reclaim all memory, and it's only running until
   the compiler finishes. It's not real time so that's fine.
@@ -13,7 +16,6 @@
   that (IE: the intent isn't to make a sane language to use, it's just "compiler" practice)
 
   TODO: 
-  - Boolean types
   - Reserve key words
   - Replace using Value to Expression in a lot of places.
   - Replace most instances of std::string
@@ -1237,6 +1239,8 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
                 tokenizer.read_next();
                 value.value_type = VALUE_TYPE_LITERAL;
                 value.type = lookup_type(first.string);
+                assert(value.type && "This struct type should exist!");
+                // NOTE: I should check if the type is indeed a struct
                 // TODO causes issues with non-parenthesized things
                 // need tochange syntax to avoid conflict
                 {
