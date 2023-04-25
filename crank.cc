@@ -17,8 +17,8 @@
   - Reserve key words
   - Replace using Value to Expression in a lot of places.
   - Replace most instances of std::string
-    There's too much copying that I'm not super comfortable with,
-    but that's part of the clean up code.
+  There's too much copying that I'm not super comfortable with,
+  but that's part of the clean up code.
 
   NOTE: A lot of thing in the "compiler" are not
   typechecked as of now! I am checking these functional changes
@@ -55,19 +55,19 @@
   - Array Programming
   - Lambdas/local functions
   - Structure Extension
-      struct E {
-        int c; 
-      };
-      struct Z {
-       int a;
-       int b;
-      };
-      struct XY {
-       using Z;
-       using E;
-      };
+  struct E {
+  int c; 
+  };
+  struct Z {
+  int a;
+  int b;
+  };
+  struct XY {
+  using Z;
+  using E;
+  };
 
-      This will be interesting to compile into C since I want this to allow for polymorphism in a weird way.
+  This will be interesting to compile into C since I want this to allow for polymorphism in a weird way.
   - Out of order implementation
 
 
@@ -186,7 +186,7 @@ struct Crank_Declaration : public Crank_Object_Decl_Base {
       (or if it's a typedef it'll just match.)
 
       Otherwise it's just the type of the object.
-     */
+    */
 
     // Used only for DECL_OBJECT
 
@@ -910,25 +910,25 @@ void _debug_print_crank_value(Crank_Value value) {
 // NOTE: remove later
 void _debug_print_expression_tree(Crank_Expression* root) {
     if (root)
-    switch (root->type) {
-        case EXPRESSION_VALUE: {
-            _debug_print_crank_value(root->value);
-        } break;
-        case EXPRESSION_UNARY: {
-            printf("(%s ", Crank_Expression_Operator_string_table[root->operation]);
-            if (root->unary.value) _debug_print_expression_tree(root->unary.value);
-            printf(") ");
-        } break;
-        case EXPRESSION_BINARY: {
-            printf("(%s ", Crank_Expression_Operator_string_table[root->operation]);
-            if (root->binary.first)
-            _debug_print_expression_tree(root->binary.first);
-            else printf("[nil first] ");
-            if (root->binary.second) _debug_print_expression_tree(root->binary.second);
-            else printf("[nil second] ");
-            printf(") ");
-        } break;
-    }
+        switch (root->type) {
+            case EXPRESSION_VALUE: {
+                _debug_print_crank_value(root->value);
+            } break;
+            case EXPRESSION_UNARY: {
+                printf("(%s ", Crank_Expression_Operator_string_table[root->operation]);
+                if (root->unary.value) _debug_print_expression_tree(root->unary.value);
+                printf(") ");
+            } break;
+            case EXPRESSION_BINARY: {
+                printf("(%s ", Crank_Expression_Operator_string_table[root->operation]);
+                if (root->binary.first)
+                    _debug_print_expression_tree(root->binary.first);
+                else printf("[nil first] ");
+                if (root->binary.second) _debug_print_expression_tree(root->binary.second);
+                else printf("[nil second] ");
+                printf(") ");
+            } break;
+        }
 }
 
 // I need to rewrite like 90% of this later.
@@ -1505,7 +1505,7 @@ Error<Crank_Module> load_module_from_source(std::string module_name, std::string
 
         /*
           Reading the top level.
-         */
+        */
         switch (first_token.type) {
             case TOKEN_COMMENT: tokenizer.read_next(); continue; // ignore
             case TOKEN_SYMBOL: {
@@ -1558,6 +1558,8 @@ void register_default_types() {
     register_new_type("void",  TYPE_VOID);
 }
 
+// NOTE: codegen explicitly refers output targets that are not
+// the interpreter.
 #include "codegen.cc"
 #include "cplusplus_codegen.cc"
 
@@ -1623,7 +1625,7 @@ x: int = 4;
 #endif
     printf("hi, did you crash\n");
 
-    #else
+#else
     
     std::vector<std::string> module_names;
     Crank_Codegen* generator = new CPlusPlusCodeGenerator();
