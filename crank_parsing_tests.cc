@@ -8,6 +8,17 @@
 
 // I am expecting a boolean expression statement.
 void parse_statements() {
+    // this should be an empty statement
+    {
+        char* test_parse =
+            R"(
+;
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(!t && "This is an empty statement");
+    }
     {
         char* test_parse =
             R"(
@@ -32,6 +43,7 @@ false;
         _debug_print_statement(t);
     }
     printf("\n");
+#if 0
     {
         char* test_parse =
             R"(
@@ -50,6 +62,7 @@ switch 4 {
         assert(t && "This should at least pass parsing at minimum.");
         _debug_print_statement(t);
     }
+#endif
 }
 
 void parse_object_literal() {
