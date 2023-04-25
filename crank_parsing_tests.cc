@@ -132,12 +132,17 @@ void typecheck_matching() {
         assert(!crank_type_match(lookup_type("int", {-1, -1, -1}), lookup_type("int", {-1, -1})) && "These should not match.");
 
         // NOTE:
+        // Hmm, is this really a typechecking responsibility?
+        // honestly, I think this is something I can check on usage for calling functions or expressions.
+        // I believe it is best to do it then
+        // However, this unused test case will be kept here so I can reference expected behavior.
+        // NOTE:
         // I know this brings into question
         // what happens if a function taking an array reference/pointer decides to push or anything
         // in that case, I'll enforce a runtime check.
         // This language isn't meant to be "efficient".
-        assert(crank_type_match(lookup_type("int", {4}), lookup_type("int", {-1})) && "This is legal because I can promote the type");
-        assert(!crank_type_match(lookup_type("int", {-1}), lookup_type("int", {4})) && "This is illegal, because a fixed size array is inferior to a flexible one");
+        // assert(crank_type_match(lookup_type("int", {4}), lookup_type("int", {-1})) && "This is legal because I can promote the type");
+        // assert(!crank_type_match(lookup_type("int", {-1}), lookup_type("int", {4})) && "This is illegal, because a fixed size array is inferior to a flexible one");
     }
 
     {
