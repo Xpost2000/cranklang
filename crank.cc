@@ -197,6 +197,10 @@ struct Crank_Declaration : public Crank_Object_Decl_Base {
     Crank_Value value;
 };
 
+struct Inline_Decl : public Crank_Object_Decl_Base {
+    Crank_Value value;
+};
+
 // mostly needed for unit testing stuff...
 Crank_Declaration make_uninitialized_object_decl(Crank_Type* type, std::string name, std::vector<int> array_dimensions={}) {
     Crank_Declaration result = {};
@@ -510,10 +514,6 @@ Error<Crank_Type_Declaration> read_type_declaration(Tokenizer_State& tokenizer) 
 
     return Error<Crank_Type_Declaration>::okay(result);
 }
-
-struct Inline_Decl : public Crank_Object_Decl_Base {
-    Crank_Value value;
-};
 
 /* A mathematical expression or boolean expression */
 // NOTE: not comma.
