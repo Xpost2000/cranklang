@@ -239,9 +239,9 @@ bool crank_type_match(Crank_Type* a, Crank_Type* b) {
         return true;
     }
 
+
     // Special case for both arrays.
     if (a->array_dimensions.size() > 0 && b->array_dimensions.size() > 0) {
-        // I think I forgot to finish this.
     }
 
     return false;

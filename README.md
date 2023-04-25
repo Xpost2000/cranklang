@@ -22,8 +22,10 @@ C-language include:
 - Arrays as proper types
 - Array Programming (first class array objects) (all component wise operations.)
 
-The language is designed to transpile relatively easily to C, and
-also includes an interpreter.
+The language is designed to transpile relatively easily to C, and may include an interpreter. As I'm thinking carefully
+of how to do a handrolled x86_64 ffi, however anything related to structs is causing me to draw blanks as I have to pack
+records into C structs and unpack them from C structs as well... I may not include it for a while (or ever, it kind of depends on how
+worth it I think is to do it.)
 
 The base implementation of the transpiler is in C++. It is not implemented in the most efficient
 way. Rather it was implemented in a way that I believe to be simple to read, and otherwise not too difficult
