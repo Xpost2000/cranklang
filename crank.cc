@@ -1228,7 +1228,11 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
             printf("Found symbol.\n");
             auto next = tokenizer.peek_next();
             value.value_type = VALUE_TYPE_SYMBOL;
-            if (next.type == TOKEN_LEFT_CURLY_BRACE) { // NOTE: Does this really have to be part of the syntax?
+            if (next.type == TOKEN_LEFT_CURLY_BRACE) {
+                /*
+                 * NOTE: just keep it like this to be simple, so it's kinda like Go.
+                 * Don't need a fancy parser. Need a working language.
+                 */
                 tokenizer.read_next();
                 // object literal
                 value.value_type = VALUE_TYPE_LITERAL;
@@ -1245,26 +1249,40 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
             } else {
                 // symbol
                 value.symbol_name = first.string;
-                if (next.type == TOKEN_LEFT_PARENTHESIS) {
-                    printf("Possible function call\n");
-                    tokenizer.read_next(); 
 
-                    value.is_function_call = true;
-                    while (tokenizer.peek_next().type != TOKEN_RIGHT_PARENTHESIS) {
-                        auto new_value = parse_expression(tokenizer);
-                        assert(new_value && "Bad function param passing");
-                        value.call_parameters.push_back(new_value);
+                /* handle reserved keywords */
+                if (value.symbol_name == "null") {
+                    assert(0 && "reserved keyword 'null'! Aborting!");
+                } else if (value.symbol_name == "true") {
+                    value.value_type = VALUE_TYPE_LITERAL;
+                    value.type = lookup_type("bool");
+                    value.int_value = 1;
+                } else if (value.symbol_name == "false") {
+                    value.value_type = VALUE_TYPE_LITERAL;
+                    value.type = lookup_type("bool");
+                    value.int_value = 0;
+                } else {
+                    if (next.type == TOKEN_LEFT_PARENTHESIS) {
+                        printf("Possible function call\n");
+                        tokenizer.read_next(); 
 
-                        if (tokenizer.peek_next().type == TOKEN_COMMA) {
-                            tokenizer.read_next();
-                            printf("HI I ATE A COMMA TODAY!\n");
-                        } else if (tokenizer.peek_next().type == TOKEN_RIGHT_PARENTHESIS) {
-                            break;
-                        } else {
-                            assert(0 && "Bad call params list! Needs comma separated parameters");
+                        value.is_function_call = true;
+                        while (tokenizer.peek_next().type != TOKEN_RIGHT_PARENTHESIS) {
+                            auto new_value = parse_expression(tokenizer);
+                            assert(new_value && "Bad function param passing");
+                            value.call_parameters.push_back(new_value);
+
+                            if (tokenizer.peek_next().type == TOKEN_COMMA) {
+                                tokenizer.read_next();
+                                printf("HI I ATE A COMMA TODAY!\n");
+                            } else if (tokenizer.peek_next().type == TOKEN_RIGHT_PARENTHESIS) {
+                                break;
+                            } else {
+                                assert(0 && "Bad call params list! Needs comma separated parameters");
+                            }
                         }
+                        tokenizer.read_next();
                     }
-                    tokenizer.read_next();
                 }
                 return Error<Crank_Value>::okay(value);
             }
@@ -1571,7 +1589,8 @@ int main(int argc, char** argv){
     register_default_types();
 
 #if 1
-    parse_statement_boolean();
+    // NOTE: should run as a test argument only
+    run_all_tests();
 #else
     std::vector<std::string> module_names;
     Crank_Codegen* generator = new CPlusPlusCodeGenerator();

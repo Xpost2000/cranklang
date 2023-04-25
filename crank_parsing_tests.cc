@@ -21,6 +21,7 @@ true;
         assert(t && "This should at least pass parsing at minimum.");
         _debug_print_statement(t);
     }
+    printf("\n");
     {
         char* test_parse =
             R"(
@@ -35,4 +36,18 @@ false;
         assert(t && "This should at least pass parsing at minimum.");
         _debug_print_statement(t);
     }
+}
+
+void parse_object_literal() {
+    
+}
+
+void parse_declaration() {
+    
+}
+
+void run_all_tests() {
+    parse_statement_boolean();
+    parse_object_literal();
+    parse_declaration();
 }
