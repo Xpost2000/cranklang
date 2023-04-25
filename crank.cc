@@ -217,32 +217,25 @@ struct Crank_Type {
 // TODO:
 // - Check array dimension matching
 // - Check function matching!
+
+Crank_Type* follow_typedef_chain(Crank_Type* type) {
+    Crank_Type* cursor = type;
+    while (cursor->rename_of) {
+        cursor = cursor->rename_of;
+    }
+    return cursor;
+}
 bool crank_type_match(Crank_Type* a, Crank_Type* b) {
+
     // Since I intern Crank_Types this is always okay.
-    printf("Crank_Type a (%p) (name: %s typedef=%p array_dim(n=%d))\n", a, a->name.c_str(), a->rename_of, a->array_dimensions.size());
-    printf("Crank_Type b (%p) (name: %s typedef=%p array_dim(n=%d))\n", b, b->name.c_str(), b->rename_of, b->array_dimensions.size());
+    printf("Crank_Type a (%p) (name: %s array_dim(n=%d))\n", a, a->name.c_str(), a->rename_of, a->array_dimensions.size());
+    printf("Crank_Type b (%p) (name: %s array_dim(n=%d))\n", b, b->name.c_str(), b->rename_of, b->array_dimensions.size());
+
+    a = follow_typedef_chain(a);
+    b = follow_typedef_chain(b);
+
     if (a == b) {
         return true;
-    }
-
-    // NOTE: Typedef checking. We'll follow back all the references
-    {
-        // I don't believe I need to check this twice
-        // but this is just in-case.
-        Crank_Type* typedef_a = a;
-        while (typedef_a) {
-            if (typedef_a == b) {
-                return true;
-            }
-            typedef_a = typedef_a->rename_of;
-        }
-        Crank_Type* typedef_b = b;
-        while (typedef_b) {
-            if (typedef_b == a) {
-                return true;
-            }
-            typedef_b = typedef_b->rename_of;
-        }
     }
 
     if (a->array_dimensions.size() > 0 && b->array_dimensions.size() > 0) {
