@@ -3,8 +3,6 @@
   how to write a language by any means necessary. So there's an allocation festival thanks to all the std::string
   I use.
 
-  3/29/2023: (wow it's been a hot minute since I've looked at this 4/21/2023)
-
   4/24/2023: Hmm, after a bit of reading I believe it is impertinent that I restructure
   the "compiler" to only produce an AST that is unchecked...
 
@@ -14,6 +12,10 @@
 
   OPTIONAL/TODO: I would like better error reporting logic, but this isn't really about
   that (IE: the intent isn't to make a sane language to use, it's just "compiler" practice)
+
+
+  CODEGEN TODO:
+  Object literals are not considered because they were not there when I hacked a c++ code generator.
 
   TODO: 
   - Reserve key words
@@ -881,64 +883,6 @@ Crank_Expression* parse_expression(Tokenizer_State& tokenizer) {
     return parse_assignment_or_compound(tokenizer);
 }
 
-void _debug_print_crank_value(Crank_Value value) {
-    switch (value.value_type) {
-        case VALUE_TYPE_LITERAL: {
-            // nested objects like arrays are not going to be fun.
-            if (value.array_elements.size()) {
-                printf("(array (unprintable-for-now)) ");
-            } else {
-                if (value.type->type == TYPE_INTEGER) {
-                    printf("(int %d) ", value.int_value);
-                } else if (value.type->type == TYPE_FLOAT) {
-                    printf("(float %3.3f) ", value.float_value);
-                } else if (value.type->type == TYPE_BOOLEAN) {
-                    printf("(bool %s) ", (value.int_value == 1) ? "TRUE" : "FALSE");
-                } else if (value.type->type == TYPE_STRINGLITERAL) {
-                    printf("(strlit \"%s\") ", value.string_value.c_str());
-                } else if (value.type->type == TYPE_CHAR) {
-                    printf("(char \"%c\") ", value.int_value);
-                } else {
-                    printf("(unprintable) ");
-                    if (value.type->type == TYPE_RECORD) {
-                        printf("(object-type) ");
-                    }
-                }
-            }
-        } break;
-        case VALUE_TYPE_SYMBOL: {
-            if (value.is_function_call) {
-                printf("(funcall %s [%d params]) ", value.symbol_name.c_str(), value.call_parameters.size());
-            } else {
-                printf("(sym %s) ", value.symbol_name.c_str());
-            }
-        } break;
-    }
-}
-// NOTE: remove later
-void _debug_print_expression_tree(Crank_Expression* root) {
-    if (root)
-        switch (root->type) {
-            case EXPRESSION_VALUE: {
-                _debug_print_crank_value(root->value);
-            } break;
-            case EXPRESSION_UNARY: {
-                printf("(%s ", Crank_Expression_Operator_string_table[root->operation]);
-                if (root->unary.value) _debug_print_expression_tree(root->unary.value);
-                printf(") ");
-            } break;
-            case EXPRESSION_BINARY: {
-                printf("(%s ", Crank_Expression_Operator_string_table[root->operation]);
-                if (root->binary.first)
-                    _debug_print_expression_tree(root->binary.first);
-                else printf("[nil first] ");
-                if (root->binary.second) _debug_print_expression_tree(root->binary.second);
-                else printf("[nil second] ");
-                printf(") ");
-            } break;
-        }
-}
-
 // I need to rewrite like 90% of this later.
 enum Crank_Statement_Type {
     STATEMENT_BLOCK, // { curly brace blocks }
@@ -995,47 +939,6 @@ struct Crank_Statement {
     Crank_Statement_Declaration declaration_statement;
     Crank_Statement_Block       block_statement; // or a compound statement
 };
-
-void _debug_print_statement(Crank_Statement* statement) {
-    printf("((%s) ", Crank_Statement_Type_string_table[statement->type]);
-    switch (statement->type) {
-        case STATEMENT_BLOCK: {
-            printf("\n");
-            for (auto& inner_statement : statement->block_statement.body) {
-                _debug_print_statement(inner_statement);
-                printf("\n");
-            }
-            printf("\n");
-        } break;
-        case STATEMENT_IF: {
-            _debug_print_expression_tree(statement->if_statement.condition);
-            printf("\n");
-            if (statement->if_statement.true_branch) {
-                _debug_print_statement(statement->if_statement.true_branch);
-            }
-            printf("\n");
-            if (statement->if_statement.false_branch) {
-                _debug_print_statement(statement->if_statement.false_branch);
-            }
-            printf("\n");
-        } break;
-        case STATEMENT_WHILE: {
-            _debug_print_expression_tree(statement->while_statement.condition);
-            printf("\n");
-            if (statement->while_statement.action) {
-                _debug_print_statement(statement->while_statement.action);
-            }
-        } break;
-        case STATEMENT_EXPRESSION: {
-            assert(statement->expression_statement.expression);
-            _debug_print_expression_tree(statement->expression_statement.expression);
-        } break;
-        case STATEMENT_RETURN: {
-            _debug_print_expression_tree(statement->return_statement.result);
-        } break;
-    }
-    printf(") ");
-}
 
 Crank_Statement* parse_any_statement(Tokenizer_State& tokenizer);
 Crank_Statement* parse_block_statement(Tokenizer_State& tokenizer);
@@ -1281,7 +1184,8 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
 
                             auto field_value = read_value(tokenizer);
                             assert(field_value.good && "Error while reading record declaration value!");
-                            literal_object->values.push_back(field_value.value);
+                            Crank_Object_Named_Value new_value = {std::string(field_symbol_token.string), field_value.value};
+                            literal_object->named_values.push_back(new_value);
 
                             {
                                 auto comma = tokenizer.peek_next();
@@ -1660,6 +1564,7 @@ void register_default_types() {
 
 #include "os_process_win32.c"
 
+#include "debug_print.cc"
 #include "crank_parsing_tests.cc"
 
 int main(int argc, char** argv){
