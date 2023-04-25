@@ -269,6 +269,10 @@ Crank_Type* register_new_type(
 }
 
 // TODO: Function type checking
+/*
+  NOTE: How do I consider pointers vs arrays... That'll be something
+  to look forward to I guess.
+*/
 Crank_Type* lookup_type(
     // NOTE: should make this type-declaration but okay
     std::string_view name,
