@@ -1359,7 +1359,6 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
         } break;
         default: {
             printf("Encountered invalid token type for value: %.*s\n", unwrap_string_view(Token_Type_string_table[first.type]));
-            assert(0 && "The parser should not be reading any other token type!");
         } break;
     }
 
