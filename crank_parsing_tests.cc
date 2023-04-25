@@ -229,8 +229,12 @@ void typecheck_matching() {
     }
 }
 
+void type_inference_test() {
+}
+
 void run_all_tests() {
     typecheck_matching();
+    type_inference_test();
     parse_statements();
     parse_object_literal();
     parse_declaration();
