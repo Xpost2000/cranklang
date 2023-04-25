@@ -183,7 +183,7 @@ void typecheck_matching() {
                                }, true),
                    lookup_type("int", {}, {}, true)
                ) && "Function signature differs. Should not match!");
-        assert(!crank_type_match(
+        assert(crank_type_match(
                    lookup_type("int", {},
                                {
                                    make_uninitialized_object_decl(lookup_type("int"), "namesdonotmatter"),
@@ -195,6 +195,18 @@ void typecheck_matching() {
                                    make_uninitialized_object_decl(lookup_type("float"), "thisisadifferentname")
                                }, true)
                ) && "Same function signature. Should match");
+        assert(!crank_type_match(
+                   lookup_type("int", {},
+                               {
+                                   make_uninitialized_object_decl(lookup_type("double"), "namesdonotmatter"),
+                                   make_uninitialized_object_decl(lookup_type("bool"), "namesdonotmatter1")
+                               }, true),
+                   lookup_type("int", {},
+                               {
+                                   make_uninitialized_object_decl(lookup_type("int"), "himynameis"),
+                                   make_uninitialized_object_decl(lookup_type("float"), "thisisadifferentname")
+                               }, true)
+               ) && "Differing function signatures. Same # of arguments.");
     }
 }
 
