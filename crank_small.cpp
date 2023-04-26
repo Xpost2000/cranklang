@@ -5,4 +5,5 @@
 #include <ctime>
 #include <string>
 #include <vector>
+typedef char* cstr;
 char  test_character = (char)52;

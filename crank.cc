@@ -1,4 +1,6 @@
 /*
+  NOTE: when outputing strings I need to sandbox everything
+  
   A small programming language interpreter/transpiler. It's not really efficient it's just to figure out
   how to write a language by any means necessary. So there's an allocation festival thanks to all the std::string
   I use.
@@ -1369,6 +1371,7 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
             tokenizer.read_next();
             return Error<Crank_Value>::okay(value);
         } break;
+        case TOKEN_COMMENT: { tokenizer.read_next(); } break;
         default: {
             printf("Encountered invalid token type for value: %.*s\n", unwrap_string_view(Token_Type_string_table[first.type]));
         } break;
@@ -1427,7 +1430,7 @@ Error<Inline_Decl> read_inline_declaration(Tokenizer_State& tokenizer) {
 
     auto type_entry = read_type_declaration(tokenizer);
     assert(type_entry.good && "Bad type entry?");
-    printf("Checking decl type...\n");
+    printf("Checking decl type... (%s)\n", type_entry.value.name.c_str());
     auto type = lookup_type(
         type_entry.value.name,
         type_entry.value.array_dimensions,
@@ -1614,12 +1617,12 @@ Error<Crank_Module> load_module_from_source(std::string module_name, std::string
                     auto new_decl = parse_variable_decl(tokenizer);
                     if (!new_decl.good) {
                         printf("%s\n", new_decl.message);
-
-                        if (new_decl.value.object_type->is_function && new_decl.value.name == "main") {
-                            module.has_main = true;
-                        }
                     } else  {
                         printf("new decl added\n");
+                        if (new_decl.value.object_type->is_function && new_decl.value.name == "main") {
+                            printf("Found main function!\n");
+                            module.has_main = true;
+                        }
                         module.decls.push_back(new_decl);
                     }
                     // this causes an extra semi-colon
@@ -1650,6 +1653,7 @@ void register_default_types() {
     register_new_type("char",  TYPE_CHAR);
     register_new_type("strlit",TYPE_STRINGLITERAL);
     register_new_type("void",  TYPE_VOID);
+    register_new_type("cstr",  TYPE_VOID);
 }
 
 // NOTE: codegen explicitly refers output targets that are not

@@ -24,11 +24,13 @@ protected:
             "<ctime>",
             "<string>",
             "<vector>",
+            // "<windows.h>",
         };
 
         for (auto import : std_imports) {
             fprintf(output, "#include %s\n", import);
         }
+        fprintf(output, "typedef char* cstr;\n");
     }
     
     void output_import(FILE* output, Crank_Module* module) {
