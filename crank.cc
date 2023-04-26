@@ -154,12 +154,12 @@ struct Crank_Value {
     // std::string unescaped_string_value; // I should escape when evaling.
 
     // used for arrays. (initializers)
-    std::vector<Crank_Expression*> array_elements;
+    std::vector<Crank_Expression*> array_elements = {};
 
     // used for functions
-    bool is_function_call;
-    std::vector<Crank_Expression*> call_parameters;
-    Crank_Statement* body;
+    bool is_function_call = false;
+    std::vector<Crank_Expression*> call_parameters = {};
+    Crank_Statement* body = nullptr;
     // TODO: add list of statements.
     // functions are theoretically values in Crank.
 
@@ -169,7 +169,7 @@ struct Crank_Value {
 
 struct Crank_Object_Named_Value {
     std::string name;
-    Crank_Expression* expression;
+    Crank_Expression* expression = nullptr;
 };
 
 // Can only be one or another, cannot be both.
@@ -192,11 +192,11 @@ struct Crank_Declaration : public Crank_Object_Decl_Base {
     */
 
     // Used only for DECL_OBJECT
-    Crank_Expression* expression;
+    Crank_Expression* expression = nullptr;
 };
 
 struct Inline_Decl : public Crank_Object_Decl_Base {
-    Crank_Expression* expression;
+    Crank_Expression* expression = nullptr;
 };
 
 // mostly needed for unit testing stuff...
@@ -217,7 +217,7 @@ struct Crank_Type {
     // TODO: for now shove this in here until I figure out how this array thing works.
     std::vector<int> array_dimensions; // empty is not an array. -1 means don't care. might be flexible.
 
-    bool is_function;
+    bool is_function = false;
     std::vector<Crank_Declaration> call_parameters;
 
     std::vector<Crank_Declaration> members;
@@ -412,14 +412,14 @@ struct Crank_Module {
     std::vector<Crank_Declaration> decls;
 
     // hack
-    bool has_main;
+    bool has_main = false;
 };
 
 struct Crank_Type_Declaration { // NOTE: for semantic analysis. Not doing type system things here!
     std::string name;
     std::vector<int> array_dimensions;
     std::vector<Crank_Declaration> call_parameters;
-    bool is_function;
+    bool is_function = false;
 };
 
 // -1 is bad
