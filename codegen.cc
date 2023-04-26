@@ -116,7 +116,8 @@ protected:
             if (value->array_elements.size()) {
                 fprintf(output, "{");
                 for (int i = 0; i < value->array_elements.size(); ++i) {
-                    output_value(output, &value->array_elements[i]);
+                    // output_value(output, &value->array_elements[i]);
+                    output_expression(output, value->array_elements[i]);
                     if (i+1 >= value->array_elements.size()) {
                         
                     } else {

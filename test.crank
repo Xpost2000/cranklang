@@ -70,7 +70,7 @@ j: int = 0;
 
     {
         printf("HIII GCD TEST\n");
-    x: int = 0;
+        x: int = 0;
         while x < 16 {
             y: int = 0;
                 while y < 16 {
@@ -82,7 +82,7 @@ j: int = 0;
     }
 
     {
-    number: int = 987245;
+    number: int = 987245 * 5 - 100;
         printf("We're going to dissect the number \"%d\"\n", number);
 
         while (number > 0) {

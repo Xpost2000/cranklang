@@ -1,3 +1,7 @@
+void _debug_print_expression_tree(Crank_Expression* root);
+void _debug_print_crank_value(Crank_Value value);
+void _debug_print_statement(Crank_Statement* statement);
+
 void _debug_print_crank_value(Crank_Value value) {
     switch (value.value_type) {
         case VALUE_TYPE_LITERAL: {
@@ -21,15 +25,17 @@ void _debug_print_crank_value(Crank_Value value) {
                         printf("(object-type) ");
                         auto object_literal = value.literal_value;
                         if (object_literal->type == OBJECT_LITERAL_DECL_ORDERED) {
-                            for (int i = 0; i < object_literal->values.size(); ++i) {
+                            for (int i = 0; i < object_literal->expressions.size(); ++i) {
                                 printf("(idx %d ", i);
-                                _debug_print_crank_value(object_literal->values[i]);
+                                // _debug_print_crank_value(object_literal->values[i]);
+                                _debug_print_expression_tree(object_literal->expressions[i]);
                                 printf(") ");
                             }
                         } else if (object_literal->type == OBJECT_LITERAL_DECL_NAMED) {
                             for (int i = 0; i < object_literal->named_values.size(); ++i) {
                                 printf("(idx %s ", object_literal->named_values[i].name.c_str());
-                                _debug_print_crank_value(object_literal->named_values[i].value);
+                                // _debug_print_crank_value(object_literal->named_values[i].value);
+                                _debug_print_expression_tree(object_literal->named_values[i].expression);
                                 printf(") ");
                             }
                         }

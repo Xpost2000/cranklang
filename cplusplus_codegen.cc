@@ -73,7 +73,8 @@ protected:
             } else {
                 if (decl->has_value) {
                     fprintf(output, " = ");
-                    output_value(output, &decl->value);
+                    // output_value(output, &decl->value);
+                    output_expression(output, decl->expression);
                 }
             }
         } else {
@@ -120,7 +121,8 @@ protected:
             } else {
                 if (decl->has_value) {
                     fprintf(output, " = ");
-                    output_value(output, &decl->value);
+                    // output_value(output, &decl->value);
+                    output_expression(output, decl->expression);
                 } else {
                     fprintf(output, " = {}");
                 }
@@ -170,19 +172,24 @@ protected:
         }
         fprintf(output, ")\n");
 
-        assert(decl->value.body && "this should have a body");
-        if (decl->value.body->type != STATEMENT_BLOCK) {
-            fprintf(output, "{\n");
-            if (decl->value.body->type == STATEMENT_EXPRESSION) {
-                fprintf(output, "return ");
+        {
+            assert(decl->expression && "Hmm. This should be an expression value");
+            auto body = decl->expression->value.body;
+            
+            assert(body && "this should have a body");
+            if (body->type != STATEMENT_BLOCK) {
+                fprintf(output, "{\n");
+                if (body->type == STATEMENT_EXPRESSION) {
+                    fprintf(output, "return ");
+                }
             }
-        }
-        output_statement(output, decl->value.body);
-        if (decl->value.body->type != STATEMENT_BLOCK) {
-            if (decl->value.body->type == STATEMENT_EXPRESSION) {
-                fprintf(output, ";\n");
+            output_statement(output, body);
+            if (body->type != STATEMENT_BLOCK) {
+                if (body->type == STATEMENT_EXPRESSION) {
+                    fprintf(output, ";\n");
+                }
+                fprintf(output, "}\n");
             }
-            fprintf(output, "}\n");
         }
     }
 

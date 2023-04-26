@@ -153,8 +153,8 @@ struct Crank_Value {
     std::string string_value; // should be interned.
     // std::string unescaped_string_value; // I should escape when evaling.
 
-    // used for arrays.
-    std::vector<Crank_Value> array_elements;
+    // used for arrays. (initializers)
+    std::vector<Crank_Expression*> array_elements;
 
     // used for functions
     bool is_function_call;
@@ -169,14 +169,14 @@ struct Crank_Value {
 
 struct Crank_Object_Named_Value {
     std::string name;
-    Crank_Value value;
+    Crank_Expression* expression;
 };
 
 // Can only be one or another, cannot be both.
 struct Crank_Object_Literal {
     int type;
     std::vector<Crank_Object_Named_Value> named_values;
-    std::vector<Crank_Value> values;
+    std::vector<Crank_Expression*> expressions;
 };
 
 // NOTE: declarations are mainly toplevel objects.
@@ -192,13 +192,11 @@ struct Crank_Declaration : public Crank_Object_Decl_Base {
     */
 
     // Used only for DECL_OBJECT
-
-    // This should really be an expression.
-    Crank_Value value;
+    Crank_Expression* expression;
 };
 
 struct Inline_Decl : public Crank_Object_Decl_Base {
-    Crank_Value value;
+    Crank_Expression* expression;
 };
 
 // mostly needed for unit testing stuff...
@@ -1254,9 +1252,9 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
                             auto colon_separator_token = tokenizer.read_next();
                             assert(colon_separator_token.type == TOKEN_COLON && "This should be a colon!");
 
-                            auto field_value = read_value(tokenizer);
-                            assert(field_value.good && "Error while reading record declaration value!");
-                            Crank_Object_Named_Value new_value = {std::string(field_symbol_token.string), field_value.value};
+                            auto field_value = parse_expression(tokenizer);
+                            assert(field_value && "Error while reading record declaration value!");
+                            Crank_Object_Named_Value new_value = {std::string(field_symbol_token.string), field_value};
                             literal_object->named_values.push_back(new_value);
 
                             {
@@ -1276,9 +1274,9 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
 
                         while (tokenizer.peek_next().type != TOKEN_RIGHT_CURLY_BRACE) {
                             printf("Reading a field\n");
-                            auto field_value = read_value(tokenizer);
-                            assert(field_value.good && "Error while reading record declaration value!");
-                            literal_object->values.push_back(field_value.value);
+                            auto field_value = parse_expression(tokenizer);
+                            assert(field_value && "Error while reading record declaration value!");
+                            literal_object->expressions.push_back(field_value);
 
                             {
                                 auto comma = tokenizer.peek_next();
@@ -1342,9 +1340,9 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
         case TOKEN_LEFT_SQUARE_BRACE: {
             // literal type.
             while (tokenizer.peek_next().type != TOKEN_RIGHT_SQUARE_BRACE) {
-                auto new_value = read_value(tokenizer);
-                assert(new_value.good && "Bad array literal parsing?");
-                value.array_elements.push_back(new_value.value);
+                auto new_value = parse_expression(tokenizer);
+                assert(new_value && "Bad array literal parsing?");
+                value.array_elements.push_back(new_value);
 
                 if (tokenizer.peek_next().type == TOKEN_COMMA) {
                     tokenizer.read_next();
@@ -1368,10 +1366,11 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
 // TODO: Does not type check yet.
 bool do_array_typecheck(Crank_Type* type,
                         std::vector<int> array_dimensions,
-                        std::vector<Crank_Value> array_elements) {
+                        std::vector<Crank_Expression*> array_elements) {
     auto expected_element_count = array_dimensions[0];
 
     // -1 means flexible. So it will always pass that check.
+#if 0
     if (expected_element_count == -1 || array_elements.size() == expected_element_count) {
         if (array_dimensions.size() > 1) { // multi dimensional array
             array_dimensions.erase(array_dimensions.begin());
@@ -1389,6 +1388,11 @@ bool do_array_typecheck(Crank_Type* type,
     }
 
     return false;
+#else
+    // need to do this later.
+    return true;
+#endif
+
 }
 
 // Any form that resembles a variable declaration.
@@ -1429,7 +1433,10 @@ Error<Inline_Decl> read_inline_declaration(Tokenizer_State& tokenizer) {
         if (function_statement) {
             printf("function declaration!\n");
             result.has_value = true;
-            result.value.body = function_statement;
+            // result.value.body = function_statement;
+            result.expression = new Crank_Expression;
+            result.expression->type = EXPRESSION_VALUE;
+            result.expression->value.body = function_statement;
         } else {
             result.has_value = false;
             printf("might be function pointer!\n");
@@ -1438,10 +1445,10 @@ Error<Inline_Decl> read_inline_declaration(Tokenizer_State& tokenizer) {
         printf("This decl is a variable!\n");
         if (tokenizer.peek_next().type == TOKEN_EQUAL) {
             tokenizer.read_next();
-            auto value = read_value(tokenizer);
-            assert(value.good);
+            auto value = parse_expression(tokenizer);
+            assert(value);
             result.has_value = true;
-            result.value     = value;
+            result.expression = value;
 
             // assert that the evaluated type should match the type we
             // found.
@@ -1449,6 +1456,8 @@ Error<Inline_Decl> read_inline_declaration(Tokenizer_State& tokenizer) {
             // NOTE: arrays have to be typed here. We'll enforce a type check on all
             // elements which is kind of slow since I should've tested it while parsing?
             // however the code is not organized to allow this for now.
+
+#if 0 // disabled for now TODO: array typecheck against known size
             if (result.value.array_elements.size() > 0) {
                 printf("Array type checking\n");
                 result.value.type = type;
@@ -1456,8 +1465,11 @@ Error<Inline_Decl> read_inline_declaration(Tokenizer_State& tokenizer) {
                 std::vector<int> array_dimensions = result.value.type->array_dimensions;
                 assert(do_array_typecheck(type, array_dimensions, value.value.array_elements) && "check the message.");
             }
+#endif
 
+#if 0 // will not work currently since expressions are nested quite thoroughly
             assert(value.value.type && "Value does not have a type for some reason?");
+#endif
 
             // This is not being done yet.
 
@@ -1560,7 +1572,7 @@ Error<Crank_Declaration> parse_variable_decl(Tokenizer_State& tokenizer) {
     decl.array_dimensions = inline_decl.value.array_dimensions;
     decl.name = inline_decl.value.name;
     decl.has_value = inline_decl.value.has_value;
-    decl.value = inline_decl.value.value;
+    decl.expression = inline_decl.value.expression;
     return Error<Crank_Declaration>::okay(decl);
 }
 
@@ -1641,7 +1653,7 @@ void register_default_types() {
 int main(int argc, char** argv){
     register_default_types();
 
-#if 1
+#if 0
     // NOTE: should run as a test argument only
     run_all_tests();
 #else

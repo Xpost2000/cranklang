@@ -120,7 +120,7 @@ x+=1;}
 
 }
 {
-int  number = 987245;
+int  number = 987245*5-100;
 ;printf("We're going to dissect the number \"%d\"\n", number);while (number>0) 
 {
 int  digit = {};
