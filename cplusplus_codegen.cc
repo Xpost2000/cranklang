@@ -162,6 +162,7 @@ protected:
             }
         }
 
+        printf("output param list\n");
         fprintf(output, "(");
         for (int i = 0; i < decl->object_type->call_parameters.size(); ++i) {
             output_function_param_item(output, &decl->object_type->call_parameters[i]);
@@ -172,25 +173,31 @@ protected:
         }
         fprintf(output, ")\n");
 
+        printf("output body?\n");
         {
-            assert(decl->expression && "Hmm. This should be an expression value");
-            auto body = decl->expression->value.body;
-            
-            assert(body && "this should have a body");
-            if (body->type != STATEMENT_BLOCK) {
-                fprintf(output, "{\n");
-                if (body->type == STATEMENT_EXPRESSION) {
-                    fprintf(output, "return ");
+            if (decl->expression) {
+                auto body = decl->expression->value.body;
+                if (body) {
+                    // assert(body && "this should have a body");
+                    if (body->type != STATEMENT_BLOCK) {
+                        fprintf(output, "{\n");
+                        if (body->type == STATEMENT_EXPRESSION) {
+                            fprintf(output, "return ");
+                        }
+                    }
+                    output_statement(output, body);
+                    if (body->type != STATEMENT_BLOCK) {
+                        if (body->type == STATEMENT_EXPRESSION) {
+                            fprintf(output, ";\n");
+                        }
+                        fprintf(output, "}\n");
+                    }
                 }
-            }
-            output_statement(output, body);
-            if (body->type != STATEMENT_BLOCK) {
-                if (body->type == STATEMENT_EXPRESSION) {
-                    fprintf(output, ";\n");
-                }
-                fprintf(output, "}\n");
+            } else {
+                fprintf(output, ";\n");
             }
         }
+        printf("finish output body?\n");
     }
 
     void output_statement(FILE* output, Crank_Statement* statement) {

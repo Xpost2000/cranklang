@@ -1181,12 +1181,13 @@ Crank_Statement* parse_block_statement(Tokenizer_State& tokenizer) {
 }
 
 Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
-    auto first = tokenizer.read_next();
+    auto first = tokenizer.peek_next();
     Crank_Value value = {};
     value.value_type = VALUE_TYPE_LITERAL;
 
     switch(first.type) {
         case TOKEN_STRING: {
+            tokenizer.read_next();
             printf("Found string literal.\n");
             value.type = lookup_type("strlit");
             // NOTE?
@@ -1194,18 +1195,21 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
             return Error<Crank_Value>::okay(value);
         } break;
         case TOKEN_NUMBERINT: {
+            tokenizer.read_next();
             printf("Found number.\n");
             value.type = lookup_type("int");
             value.int_value = first.value32;
             return Error<Crank_Value>::okay(value);
         } break;
         case TOKEN_NUMBERFLOAT: {
+            tokenizer.read_next();
             printf("Found float number.\n");
             value.type = lookup_type("float");
             value.float_value = first.value32f;
             return Error<Crank_Value>::okay(value);
         } break;
         case TOKEN_SYMBOL: {
+            tokenizer.read_next();
             /*
               NOTE:
               Leads to one of the three possibilities
@@ -1338,6 +1342,7 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
             // NOTE: not type checked here.
             // we'll type check values after they're read.
         case TOKEN_LEFT_SQUARE_BRACE: {
+            tokenizer.read_next();
             // literal type.
             while (tokenizer.peek_next().type != TOKEN_RIGHT_SQUARE_BRACE) {
                 auto new_value = parse_expression(tokenizer);
@@ -1437,9 +1442,6 @@ Error<Inline_Decl> read_inline_declaration(Tokenizer_State& tokenizer) {
             result.expression = new Crank_Expression;
             result.expression->type = EXPRESSION_VALUE;
             result.expression->value.body = function_statement;
-        } else {
-            result.has_value = false;
-            printf("might be function pointer!\n");
         }
     } else {
         printf("This decl is a variable!\n");
@@ -1611,6 +1613,7 @@ Error<Crank_Module> load_module_from_source(std::string module_name, std::string
                         printf("new decl added\n");
                         module.decls.push_back(new_decl);
                     }
+                    // this causes an extra semi-colon
                     assert(tokenizer.read_next().type == TOKEN_SEMICOLON);
                 }
             } break;

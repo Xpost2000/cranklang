@@ -1,0 +1,2 @@
+//function_without_definition: int(x: int) extern; // EXTERNAL FUNCTION
+function_without_definition: int(x: int);

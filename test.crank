@@ -10,6 +10,8 @@ gcd: int(a: int, b: int)
 if b == 0 return a;
 else return gcd(b, a % b);;
 
+function_without_definition: int(x: int);;
+
 digit_to_string: strlit(number: int) {
     if      number == 0 return "zero";
     else if number == 1 return "one";
