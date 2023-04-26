@@ -1,1 +1,5 @@
-function_without_definition: int(x: int);
+// function_without_definition: int(x: int);
+// function_without_definition: int(x: int) extern;
+
+test_character: char = '4';
+// test_character: int = 5;

@@ -5,6 +5,4 @@
 #include <ctime>
 #include <string>
 #include <vector>
-int  function_without_definition(int  x);
-int  function_without_definition(int  x)
-;
+char  test_character = (char)52;

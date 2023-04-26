@@ -160,6 +160,7 @@ struct Crank_Value {
     bool is_function_call = false;
     std::vector<Crank_Expression*> call_parameters = {};
     Crank_Statement* body = nullptr;
+
     // TODO: add list of statements.
     // functions are theoretically values in Crank.
 
@@ -183,6 +184,7 @@ struct Crank_Object_Literal {
 // Although we do have those types inside of function bodies or statements.
 struct Crank_Declaration : public Crank_Object_Decl_Base {
     int decl_type;
+    // bool is_externally_defined = false; // any declaration followed by extern
     // int export; // TODO: module system!
     /*
       Will be created if it's a DECL_TYPE, based off parsing.
@@ -1186,6 +1188,13 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
     value.value_type = VALUE_TYPE_LITERAL;
 
     switch(first.type) {
+        case TOKEN_CHARACTER: {
+            tokenizer.read_next();
+            printf("Found char literal.\n");
+            value.type = lookup_type("char");
+            value.int_value = (int)first.valuechar;
+            return Error<Crank_Value>::okay(value);
+        } break;
         case TOKEN_STRING: {
             tokenizer.read_next();
             printf("Found string literal.\n");

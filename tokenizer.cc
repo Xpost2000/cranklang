@@ -64,7 +64,7 @@ Token Tokenizer_State::read_next() {
                     character_token.valuechar = first;
                 }
 
-                read_cursor++; // skip quote
+                // read_cursor++; // skip quote
                 character_token.string = source.substr(start_of_token+1, (read_cursor-1)-character_token.col_found);
                 return character_token;
             } break;

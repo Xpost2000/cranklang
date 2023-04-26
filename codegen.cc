@@ -144,6 +144,9 @@ protected:
                     case TYPE_FLOAT: {
                         fprintf(output, "%f", value->float_value);
                     } break;
+                    case TYPE_CHAR: {
+                        fprintf(output, "(char)%d", value->int_value);
+                    } break;
                     case TYPE_STRINGLITERAL: {
                         fprintf(output, "\"%s\"", value->string_value.c_str());
                     } break;
