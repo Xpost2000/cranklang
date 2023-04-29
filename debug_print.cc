@@ -106,6 +106,13 @@ void _debug_print_statement(Crank_Statement* statement) {
             if (declaration->has_value) {
                 _debug_print_expression_tree(declaration->expression);
             }
+            if (declaration->is_externally_defined) {
+                if (declaration->extern_definition.linkage_name != "") {
+                    printf("(extern %s)", declaration->extern_definition.linkage_name.c_str());
+                } else {
+                    printf("(extern)");
+                }
+            }
             printf("\n");
         } break;
         case STATEMENT_BLOCK: {

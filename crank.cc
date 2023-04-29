@@ -189,9 +189,14 @@ struct Crank_Object_Literal {
 
 // NOTE: declarations are mainly toplevel objects.
 // Although we do have those types inside of function bodies or statements.
+struct Crank_External_Information {
+    std::string linkage_name = "";
+};
+
 struct Crank_Declaration : public Crank_Object_Decl_Base {
     int decl_type;
-    // bool is_externally_defined = false; // any declaration followed by extern
+    bool is_externally_defined = false; // any declaration followed by extern
+    Crank_External_Information extern_definition;
     // int export; // TODO: module system!
     /*
       Will be created if it's a DECL_TYPE, based off parsing.

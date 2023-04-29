@@ -180,6 +180,28 @@ array: int[3][4][5];
         assert(t && "This should at least pass parsing at minimum.");
         _debug_print_statement(t);
     } printf("\n");
+    {
+        char* test_parse =
+            R"(
+function: int(a: int, y: int) extern;
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(t && "This should at least pass parsing at minimum.");
+        _debug_print_statement(t);
+    } printf("\n");
+    {
+        char* test_parse =
+            R"(
+function: int(a: int, y: int) extern("link_name_in_other_language");
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(t && "This should at least pass parsing at minimum.");
+        _debug_print_statement(t);
+    } printf("\n");
 }
 
 // this is arguably the most important test
