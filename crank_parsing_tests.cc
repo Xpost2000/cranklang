@@ -43,7 +43,7 @@ false;
         _debug_print_statement(t);
     }
     printf("\n");
-#if 0
+#if 0 // probably not doing switch statements
     {
         char* test_parse =
             R"(
@@ -99,6 +99,65 @@ Record { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, };
 void parse_declaration() {
     // TODO: need to check for what happens when I parse a declaration
     // with an expression, since that's the other thing that's kinda busted right now
+    {
+        char* test_parse =
+            R"(
+name: int;
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(t && "This should at least pass parsing at minimum.");
+        _debug_print_statement(t);
+    } printf("\n");
+    // function
+    {
+        char* test_parse =
+            R"(
+name: int(a: int, y: int);
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(t && "This should at least pass parsing at minimum.");
+        _debug_print_statement(t);
+    } printf("\n");
+    // pointer 1
+    {
+        char* test_parse =
+            R"(
+name: int*;
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(t && "This should at least pass parsing at minimum.");
+        _debug_print_statement(t);
+    } printf("\n");
+    // pointer 3
+    {
+        char* test_parse =
+            R"(
+name: int***;
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(t && "This should at least pass parsing at minimum.");
+        _debug_print_statement(t);
+    } printf("\n");
+    // array
+    {
+        char* test_parse =
+            R"(
+name: int[3][4][5];
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(t && "This should at least pass parsing at minimum.");
+        _debug_print_statement(t);
+    } printf("\n");
 }
 
 // this is arguably the most important test

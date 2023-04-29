@@ -79,6 +79,23 @@ void _debug_print_expression_tree(Crank_Expression* root) {
 void _debug_print_statement(Crank_Statement* statement) {
     printf("((%s) ", Crank_Statement_Type_string_table[statement->type]);
     switch (statement->type) {
+        case STATEMENT_DECLARATION: {
+            auto& declaration = statement->declaration_statement.declaration;
+            // need as much info as I can get
+            printf("(decl-name: %s)\n\t(basetype: %s,\n\tarraydimens: %d,\n\tptrdepth: %d,\n\tisfunction: %d,\n\tfunctionparams: %d,\n\trecordmembers: %d)\n(has-value: %d) ",
+                   declaration->name.c_str(),
+                   declaration->object_type->name.c_str(),
+                   declaration->object_type->array_dimensions.size(),
+                   declaration->object_type->pointer_depth,
+                   declaration->object_type->is_function,
+                   declaration->object_type->call_parameters.size(),
+                   declaration->object_type->members.size(),
+                   declaration->has_value);
+            if (declaration->has_value) {
+                _debug_print_expression_tree(declaration->expression);
+            }
+            printf("\n");
+        } break;
         case STATEMENT_BLOCK: {
             printf("\n");
             for (auto& inner_statement : statement->block_statement.body) {

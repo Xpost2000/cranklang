@@ -114,7 +114,10 @@ struct Crank_Object_Literal;
 
 struct Crank_Object_Decl_Base {
     Crank_Type* object_type;
+
+    //... hmm when do I use this?
     std::vector<int> array_dimensions; // empty is not an array. -1 means don't care. might be flexible.
+
     std::string name;
     bool has_value;
 };
