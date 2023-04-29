@@ -80,14 +80,10 @@
   much time so I've kinda stopped doing it at some point just to get sutff done
   faster.
 */
+#include "crank-cpp-runtime/crank_preamble.h"
 #include "tokenizer.h"
-#include <cstdio>
-
 #include "utilities.cc"
 #include "error.h"
-
-#include <vector>
-#include <unordered_map>
 
 enum Crank_Declaration_Type {
     DECL_OBJECT, // Functions & Variables. I want them to work as part of the same type system.

@@ -8,7 +8,10 @@ not going to pull in LLVM and writing my own native codegen is kind of painful, 
 in Crank to be a cool goal :)**
 
 This is a basic alternate C-syntax sort of language. It's an exercise in writing parsers and figuring
-out how to write compilers.
+out how to write compilers. So the language is effective a C+=0.5. It's effectively still C, but with some
+extra features.
+
+The language parses everything and should be typechecking so a C code generator isn't exactly a copout!
 
 I don't really advise using this because it's a toy language but at least you
 can keep the C++ code it compiles if something really goes south.
