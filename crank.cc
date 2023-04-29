@@ -1,9 +1,11 @@
 /*
-  NOTE: when outputing strings I need to sandbox everything
-  
-  A small programming language interpreter/transpiler. It's not really efficient it's just to figure out
-  how to write a language by any means necessary. So there's an allocation festival thanks to all the std::string
-  I use.
+  NOTE: It appears I am probably letting go of the interpreter idea, and just focusing on the transpiler.
+  To the best of it's ability, crank is still checking stuff so it is still an actual language.
+
+  A small programming language transpiler. It's not really efficient
+  it's just to figure out how to write a language by any means
+  necessary. So there's an allocation festival thanks to all the
+  std::string I use.
 
   4/24/2023: Hmm, after a bit of reading I believe it is impertinent that I restructure
   the "compiler" to only produce an AST that is unchecked...
@@ -46,11 +48,6 @@
   to make sure they evaluate to the right type.
 
   Most of this code is "backend"/"compiler" logic.
-
-  The interpreter logic will be based off evaluating the tree later.
-
-  One of them quick hack projects,
-  I do with a bit of time.
 
   A minimally useful language?
 
@@ -1590,6 +1587,34 @@ Error<Crank_Declaration> parse_variable_decl(Tokenizer_State& tokenizer) {
     return Error<Crank_Declaration>::okay(decl);
 }
 
+/**
+ * NOTE: 4/29/
+ *
+ * With more clear ideas on how to make this still allow for correct compilation behavior
+ * whilst still being simple I'll do this.
+ *
+ *
+ * Parse Types first
+ * the type system is used to check if a declaration is legal (does the type of something exist?), and therefore
+ * a separate pass to parse all the types is needed.
+ *
+ * lookup_type, will also have to get access to the module tree. In order to parse things.
+ * It'll be complicated because types are not classified as expression objects so they'll require slightly special parsing
+ * in order to qualify their names.
+ *
+ * IE:
+ * name : ModuleName.Type = ModuleName.GLOBAL_VARIABLE + 34;
+ *
+ * However Crank is still a toy language, not meant for production and for now I can allow modules to be single level
+ * which simplifies a lot of cases.
+ *
+ * Module name can be specified through
+ * modname NewModuleName;
+ *
+ * The new module name cannot include dots.
+ *
+ * This should make it useful enough to be practical, but then falls under Java's weakness of one file per "module"
+ **/
 Error<Crank_Module> load_module_from_source(std::string module_name, std::string_view source_code) {
     Crank_Module module;
     module.module_name = module_name;
