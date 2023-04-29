@@ -209,10 +209,6 @@ struct Crank_Declaration : public Crank_Object_Decl_Base {
     Crank_Expression* expression = nullptr;
 };
 
-struct Inline_Decl : public Crank_Object_Decl_Base {
-    Crank_Expression* expression = nullptr;
-};
-
 // mostly needed for unit testing stuff...
 Crank_Declaration make_uninitialized_object_decl(Crank_Type* type, std::string name, std::vector<int> array_dimensions={}) {
     Crank_Declaration result = {};
@@ -712,7 +708,7 @@ Crank_Expression* value_expression(Crank_Value value) {
     return result;
 }
 
-Error<Inline_Decl> read_inline_declaration(Tokenizer_State& tokenizer);
+Error<Crank_Declaration> read_inline_declaration(Tokenizer_State& tokenizer);
 
 // NOTE: consider read function value!
 Error<Crank_Value> read_value(Tokenizer_State& tokenizer);
@@ -1438,19 +1434,19 @@ bool do_array_typecheck(Crank_Type* type,
 }
 
 // Any form that resembles a variable declaration.
-Error<Inline_Decl> read_inline_declaration(Tokenizer_State& tokenizer) {
-    Inline_Decl result;
+Error<Crank_Declaration> read_inline_declaration(Tokenizer_State& tokenizer) {
+    Crank_Declaration result;
     result.has_value = false;
 
     if (tokenizer.peek_next().type != TOKEN_SYMBOL) {
-        return Error<Inline_Decl>::fail("Not a declaration");
+        return Error<Crank_Declaration>::fail("Not a declaration");
     } 
 
     auto name = tokenizer.peek_next();
-    if (name.type != TOKEN_SYMBOL) return Error<Inline_Decl>::fail("not a symbol, cannot find name");
+    if (name.type != TOKEN_SYMBOL) return Error<Crank_Declaration>::fail("not a symbol, cannot find name");
     tokenizer.read_next();
     auto colon = tokenizer.peek_next();
-    if (colon.type != TOKEN_COLON) return Error<Inline_Decl>::fail("not a colon, cannot be a decl");
+    if (colon.type != TOKEN_COLON) return Error<Crank_Declaration>::fail("not a colon, cannot be a decl");
     tokenizer.read_next();
 
     auto type_entry = read_type_declaration(tokenizer);
@@ -1519,7 +1515,7 @@ Error<Inline_Decl> read_inline_declaration(Tokenizer_State& tokenizer) {
         }
     }
 
-    return Error<Inline_Decl>::okay(result);
+    return Error<Crank_Declaration>::okay(result);
 }
 
 bool read_record_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
