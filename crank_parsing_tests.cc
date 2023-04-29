@@ -126,7 +126,29 @@ function: int(a: int, y: int);
     {
         char* test_parse =
             R"(
-single_pointer: int*;
+single_pointer: int**;
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(t && "This should at least pass parsing at minimum.");
+        _debug_print_statement(t);
+    } printf("\n");
+    {
+        char* test_parse =
+            R"(
+single_pointer_again: int**;
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(t && "This should at least pass parsing at minimum.");
+        _debug_print_statement(t);
+    } printf("\n");
+    {
+        char* test_parse =
+            R"(
+quadruple_pointer: int****;
 )";
         printf("Parsing: %s\n", test_parse);
         Tokenizer_State tokenizer(test_parse);

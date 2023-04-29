@@ -333,6 +333,14 @@ Crank_Type* lookup_type(
     // NOTE: this should be a conjunctional test like a bunch of ANDs
     // but this ordering works for the programs I am writing.
 
+    printf("Checking for %.*s, (array dimens: %d), (call params: %d), (isfunc: %d), (ptrdepth: %d)\n",
+           unwrap_string_view(name),
+           array_dimensions.size(),
+           call_parameters.size(),
+           is_function,
+           pointer_depth
+    );
+
     if (is_function || call_parameters.size() > 0) { // remarkably similar to the array case.
         printf("Checking against function types?");
         Crank_Type* result = nullptr;
@@ -373,6 +381,7 @@ Crank_Type* lookup_type(
             printf("Register new function type\n");
         }
 
+        printf("Found type match(functionpointer).\n");
         return result;
     }
 
@@ -404,8 +413,10 @@ Crank_Type* lookup_type(
                 // Arrays share the same "base value_type" as their
                 // scalar counterpart.
                 result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters, is_function, pointer_depth);
+                printf("Register new pointer type\n");
             }
 
+            printf("Found type match(ptr).\n");
             return result;
         } else {
             return nullptr;
@@ -444,8 +455,10 @@ Crank_Type* lookup_type(
                 // Arrays share the same "base value_type" as their
                 // scalar counterpart.
                 result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters, is_function, pointer_depth);
+                printf("Register new array type\n");
             }
 
+            printf("Found type match(arrdimens).\n");
             return result;
         } else {
             return nullptr;
@@ -538,6 +551,7 @@ Error<Crank_Type_Declaration> read_type_declaration(Tokenizer_State& tokenizer) 
             return Error<Crank_Type_Declaration>::fail("Fail to read array specifier.");
         }
     }
+    printf("parsed %d array dimensions\n", array_dimensions.size());
 
     // parse a function type
     printf("try to find function parameters\n");
@@ -567,6 +581,7 @@ Error<Crank_Type_Declaration> read_type_declaration(Tokenizer_State& tokenizer) 
 
     // parse pointers at the end
     int pointer_depth = 0;
+    printf("Trying to parse pointers\n");
     while (tokenizer.peek_next().type == TOKEN_MUL) {
         tokenizer.read_next();
         pointer_depth += 1;
