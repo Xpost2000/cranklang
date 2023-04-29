@@ -212,15 +212,21 @@ Crank_Declaration make_uninitialized_object_decl(Crank_Type* type, std::string n
 }
 
 struct Crank_Type {
+    /*
+     * base type of object.
+     *
+     * arrays and pointers are not their own types and are considered
+     * "derivative" types.
+     */
     int type;
     Crank_Type* rename_of = nullptr;
     std::string name;
     // TODO: for now shove this in here until I figure out how this array thing works.
     std::vector<int> array_dimensions; // empty is not an array. -1 means don't care. might be flexible.
 
+    int pointer_depth = 0;
     bool is_function = false;
     std::vector<Crank_Declaration> call_parameters;
-
     std::vector<Crank_Declaration> members;
 };
 
@@ -237,6 +243,8 @@ Crank_Type* follow_typedef_chain(Crank_Type* type) {
     return cursor;
 }
 
+// Crank type match is a strict type matching.
+// Typecasting or promotion or implicit conversion is handled else where.
 bool crank_type_match(Crank_Type* a, Crank_Type* b) {
 
     // Since I intern Crank_Types this is always okay.
@@ -253,14 +261,17 @@ bool crank_type_match(Crank_Type* a, Crank_Type* b) {
     return false;
 }
 
-// globally registered types TODO: make this per module. I'm just doing this to make resolution easy until I figure out what I'm doing.
+// globally registered types
+// TODO: make this per module. I'm just doing this to make resolution easy until I figure out what I'm doing.
 std::vector<Crank_Type*> global_type_table; // too many allocations, but I don't want to deal with pointer fix up right now.
+
 Crank_Type* register_new_type(
     std::string_view name,
     int type,
     std::vector<int> array_dimensions={},
     std::vector<Crank_Declaration> call_parameters={},
-    bool is_function = false
+    bool is_function = false,
+    int pointer_depth = 0
 ) {
     global_type_table.push_back(new Crank_Type);
     Crank_Type* result = global_type_table.back();
@@ -269,6 +280,7 @@ Crank_Type* register_new_type(
     result->array_dimensions = array_dimensions;
     result->call_parameters  = call_parameters;
     result->is_function = is_function;
+    result->pointer_depth = pointer_depth;
     return result;
 }
 
@@ -290,13 +302,16 @@ Crank_Type* register_new_type(
  *
  * I need to check the call_parameters to ensure that the declarations
  * I make are legal (We should not be allowed to declare a new DECL_TYPE)
+ *
+ * NOTE: need to rework this for when I actually use real modules which require lookup
  */
 Crank_Type* lookup_type(
     // NOTE: should make this type-declaration but okay
     std::string_view name,
     std::vector<int> array_dimensions={},
     std::vector<Crank_Declaration> call_parameters={},
-    bool is_function = false
+    bool is_function = false,
+    int pointer_depth = 0
 ) {
     // NOTE: when looking up an array variant
     //       type.
@@ -312,7 +327,9 @@ Crank_Type* lookup_type(
     // so we will look up if the same name without the array specifier
     // exists first.
 
-    // Do a more thorough type check.
+    // NOTE: this should be a conjunctional test like a bunch of ANDs
+    // but this ordering works for the programs I am writing.
+
     if (is_function || call_parameters.size() > 0) { // remarkably similar to the array case.
         printf("Checking against function types?");
         Crank_Type* result = nullptr;
@@ -349,11 +366,48 @@ Crank_Type* lookup_type(
 
         if (!result) {
             // register the function type.
-            result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters, true);
+            result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters, true, pointer_depth);
             printf("Register new function type\n");
         }
 
         return result;
+    }
+
+    if (pointer_depth > 0) {
+        printf("looking up pointer type\n");
+        if (lookup_type(name)) {
+            printf("found base type\n");
+            Crank_Type* result = nullptr;
+            for (auto type : global_type_table) {
+                if (type->name == name) {
+                    result = type;
+                    printf("%d a vs %d b\n", type->pointer_depth, pointer_depth);
+                    if (type->pointer_depth != pointer_depth) {
+                        result = nullptr;
+                    }
+                } else {
+                    result = nullptr;
+                }
+
+                if (result) { break; }
+            }
+
+            if (!result) {
+                // register the arrayed version of the type.
+                // it will be cached. This is not the best way to do the type
+                // system. However arrays are distinct types which is a sane thing
+                // to do imo.
+
+                // NOTE:
+                // Arrays share the same "base value_type" as their
+                // scalar counterpart.
+                result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters, is_function, pointer_depth);
+            }
+
+            return result;
+        } else {
+            return nullptr;
+        }
     }
 
     if (array_dimensions.size() > 0) {
@@ -387,14 +441,17 @@ Crank_Type* lookup_type(
                 // NOTE:
                 // Arrays share the same "base value_type" as their
                 // scalar counterpart.
-                result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters, is_function);
+                result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters, is_function, pointer_depth);
             }
 
             return result;
         } else {
             return nullptr;
         }
-    } else {
+    }
+
+    // check for name type
+    {
         for (auto type : global_type_table) {
             if (type->name == name) {
                 return type;
@@ -1694,7 +1751,8 @@ void register_default_types() {
 int main(int argc, char** argv){
     register_default_types();
 
-#if 0
+    // TODO: actual command line arguments.
+#if 1
     // NOTE: should run as a test argument only
     run_all_tests();
 #else

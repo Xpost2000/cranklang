@@ -240,9 +240,17 @@ void typecheck_matching() {
                                }, true)
                ) && "Differing function signatures. Same # of arguments.");
     }
+    {
+        printf("Pointer matching\n");
+        assert(crank_type_match(lookup_type("int", {-1, -1, -1}, {}, false, 1), lookup_type("int", {-1, -1, -1}, {}, false, 1)) && "Same pointer types. should be okay");
+        assert(!crank_type_match(lookup_type("int", {-1, -1, -1}, {}, false, 1), lookup_type("int", {-1, -1, -1}, {}, false, 2)) && "Different pointer types. Should not match.");
+        assert(!crank_type_match(lookup_type("int", {}, {}, false, 1), lookup_type("float", {}, {}, false, 1)) && "Different pointer types. Should not match.");
+        assert(crank_type_match(lookup_type("int", {}, {}, false, 1), lookup_type("int", {}, {}, false, 1)) && "Same pointer types. should be okay");
+    }
 }
 
 void type_inference_test() {
+    //?
 }
 
 void run_all_tests() {
