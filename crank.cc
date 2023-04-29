@@ -1506,6 +1506,7 @@ Error<Crank_Declaration> read_inline_declaration(Tokenizer_State& tokenizer) {
             result.expression->value.body = function_statement;
         }
     } else {
+        assert(!result.is_externally_defined && "Variables cannot be externally defined in this language!");
         printf("This decl is a variable!\n");
         if (tokenizer.peek_next().type == TOKEN_EQUAL) {
             tokenizer.read_next();
@@ -1756,7 +1757,7 @@ int main(int argc, char** argv){
     register_default_types();
 
     // TODO: actual command line arguments.
-#if 1
+#if 0
     // NOTE: should run as a test argument only
     run_all_tests();
 #else

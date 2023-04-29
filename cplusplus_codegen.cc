@@ -41,8 +41,15 @@ protected:
         } else {
             fprintf(output, "%s ", type->name.c_str());
         }
+
+        // it's a bit of a pain in the ass for variables lol in C++.
+        // need to think about that one.
         if (type->is_function) {
             // idk;
+        }
+
+        for (int ptr = 0; ptr < type->pointer_depth; ++ptr) {
+            fprintf(output, "*");
         }
     }
 
@@ -248,10 +255,25 @@ protected:
         printf("\n");
     }
 
+    void output_value(FILE* output, Crank_Value* value) {
+        bool overrode_behavior = false;
+        if (value->value_type == VALUE_TYPE_LITERAL) {
+            auto typeof_object = value->type;
+            if (typeof_object->type == TYPE_STRINGLITERAL) {
+                // C++ is too permissive lol. So I need to figure this one out.
+                // fprintf(output, "std::string(\"%s\")", value->string_value.c_str());
+                // overrode_behavior = true;
+            }
+        }
+
+        if (!overrode_behavior) {
+            Crank_Codegen_Partial_CStyleLanguage::output_value(output, value);
+        }
+    }
+
     // MAIN should have specific signature but whatever!
     void output_entry_point(FILE* output) {
         /** for C++ **/
-#define AS_STRING
         auto crank_main_point_entry_cpp =
             #include "crank-cpp-runtime/crank_main_point_entry.cpp"
             ;

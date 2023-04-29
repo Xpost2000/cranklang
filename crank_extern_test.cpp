@@ -1,4 +1,4 @@
-R"(
+
 /**
  * This preamble is for default types
  * and the headers of the language.
@@ -74,4 +74,28 @@ typedef int16_t s16;
 typedef int8_t  s8;
 
 typedef u32 uint;
-)"
+int  message_box(void * hwnd, char * lptext, char * caption, uint  type);
+int  crank_mainpoint_entry(int  argc, std::string  arguments[]);
+int  message_box(void * hwnd, char * lptext, char * caption, uint  type)
+;
+int  crank_mainpoint_entry(int  argc, std::string  arguments[])
+{
+message_box(0, "Hello World", "Hello Title", 0);return 0;
+}
+
+/**
+   This file is copy and pasted wholesale,
+
+   DO NOT TOUCH ME!
+
+   ASSUMED std::string is usable, and vector!
+**/
+
+int main(int argc, char** argv) {
+    std::vector<std::string> arguments;
+    for (int i = 0; i < argc; ++i) {
+        arguments.push_back(argv[i]);
+    }
+
+    return crank_mainpoint_entry(arguments.size(), arguments.data());
+}

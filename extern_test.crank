@@ -1,0 +1,6 @@
+message_box : extern("MessageBoxA") int(hwnd: void*, lptext: char*, caption: char*, type: uint);
+
+main: int(argc: int, arguments: strlit[]) {
+      message_box(0, "Hello World", "Hello Title", 0);
+      return 0;
+};
