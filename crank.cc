@@ -393,6 +393,7 @@ Crank_Type* lookup_type(
             for (auto type : global_type_table) {
                 if (type->name == name) {
                     result = type;
+                    printf("pointer depth: %d vs %d\n", type->pointer_depth, pointer_depth);
                     if (type->pointer_depth != pointer_depth) {
                         result = nullptr;
                     }
