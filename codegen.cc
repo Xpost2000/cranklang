@@ -111,6 +111,7 @@ protected:
         } else {
             // NOTE: TODO ON ARRAYS
             // AND FUNCTIONS?
+            // AND POINTERS?
             
             // Object Literal;
             if (value->array_elements.size()) {
@@ -138,20 +139,31 @@ protected:
                             fprintf(output, "true");
                         }
                     } break;
-                    case TYPE_INTEGER: {
+                    case TYPE_UNSIGNEDINTEGER8:
+                    case TYPE_UNSIGNEDINTEGER16:
+                    case TYPE_UNSIGNEDINTEGER32:
+                    case TYPE_UNSIGNEDINTEGER64:
+                    {
+                        fprintf(output, "%u", value->uint_value);
+                    } break;
+                    case TYPE_INTEGER8:
+                    case TYPE_INTEGER16:
+                    case TYPE_INTEGER32:
+                    case TYPE_INTEGER64:
+                    {
                         fprintf(output, "%d", value->int_value);
                     } break;
-                    case TYPE_FLOAT: {
+                    case TYPE_FLOAT:
+                    case TYPE_DOUBLE:
+                    {
                         fprintf(output, "%f", value->float_value);
-                    } break;
-                    case TYPE_CHAR: {
-                        fprintf(output, "(char)%d", value->int_value);
                     } break;
                     case TYPE_STRINGLITERAL: {
                         fprintf(output, "\"%s\"", value->string_value.c_str());
                     } break;
                     case TYPE_RECORD: {
                         // TODO: parse
+                        // this is parsed but we need to figure something out.
                     } break;
                     case TYPE_VOID: {
                     

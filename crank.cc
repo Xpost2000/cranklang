@@ -94,13 +94,21 @@ enum Crank_Declaration_Type {
 enum Crank_Types {
     TYPE_NUMERIC, // unresolved numeric type. Will be converted as needed. 
     TYPE_BOOLEAN, // NOT IMPLEMENTED?
-    TYPE_INTEGER,
+    TYPE_INTEGER8,
+    TYPE_INTEGER16,
+    TYPE_INTEGER32,
+    TYPE_INTEGER64,
+    TYPE_UNSIGNEDINTEGER8,
+    TYPE_UNSIGNEDINTEGER16,
+    TYPE_UNSIGNEDINTEGER32,
+    TYPE_UNSIGNEDINTEGER64,
     TYPE_FLOAT,
+    TYPE_DOUBLE,
     TYPE_STRINGLITERAL,
-    TYPE_CHAR, // NOT IMPLEMENTED
     TYPE_RECORD, // NOT FULLY IMPLEMENTED
     TYPE_VOID, // NOT IMPLEMENTED
     TYPE_RENAME, // typedef, this doesn't really have much significance, so I might remove this.
+    TYPE_CHAR = TYPE_INTEGER8,
     TYPE_COUNT
 };
 
@@ -144,8 +152,9 @@ struct Crank_Value {
 
     // if it's a symbol, don't worry about the type for now.
     union {
-        int   int_value;
-        float float_value;
+        uint64_t   uint_value;
+        int64_t   int_value;
+        double float_value;
         Crank_Object_Literal* literal_value;
     };
     std::string string_value; // should be interned.
@@ -1688,13 +1697,28 @@ Error<Crank_Module> load_module_from_source(std::string module_name, std::string
 }
 
 void register_default_types() {
-    register_new_type("int",   TYPE_INTEGER);
+    register_new_type("int",   TYPE_INTEGER32);
+    register_new_type("uint",  TYPE_UNSIGNEDINTEGER32);
+
+    register_new_type("s64",   TYPE_INTEGER64);
+    register_new_type("s32",   TYPE_INTEGER32);
+    register_new_type("s16",   TYPE_INTEGER16);
+    register_new_type("s8",    TYPE_INTEGER8);
+    register_new_type("u64",   TYPE_UNSIGNEDINTEGER64);
+    register_new_type("u32",   TYPE_UNSIGNEDINTEGER32);
+    register_new_type("u16",   TYPE_UNSIGNEDINTEGER16);
+    register_new_type("u8",    TYPE_UNSIGNEDINTEGER8);
+
     register_new_type("float", TYPE_FLOAT);
+    register_new_type("double", TYPE_DOUBLE);
+
+    register_new_type("f32", TYPE_FLOAT);
+    register_new_type("f64", TYPE_DOUBLE);
+
     register_new_type("bool",  TYPE_BOOLEAN);
     register_new_type("char",  TYPE_CHAR);
     register_new_type("strlit",TYPE_STRINGLITERAL);
     register_new_type("void",  TYPE_VOID);
-    register_new_type("cstr",  TYPE_VOID);
 }
 
 // NOTE: codegen explicitly refers output targets that are not

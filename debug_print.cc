@@ -9,16 +9,28 @@ void _debug_print_crank_value(Crank_Value value) {
             if (value.array_elements.size()) {
                 printf("(array (unprintable-for-now)) ");
             } else {
-                if (value.type->type == TYPE_INTEGER) {
+                if (
+                    value.type->type == TYPE_INTEGER8 ||
+                    value.type->type == TYPE_INTEGER16 ||
+                    value.type->type == TYPE_INTEGER32 ||
+                    value.type->type == TYPE_INTEGER64
+                ) {
                     printf("(int %d) ", value.int_value);
+                } else if (
+                    value.type->type == TYPE_UNSIGNEDINTEGER8 ||
+                    value.type->type == TYPE_UNSIGNEDINTEGER16 ||
+                    value.type->type == TYPE_UNSIGNEDINTEGER32 ||
+                    value.type->type == TYPE_UNSIGNEDINTEGER64
+                ) {
+                    printf("(uint %d) ", value.uint_value);
                 } else if (value.type->type == TYPE_FLOAT) {
                     printf("(float %3.3f) ", value.float_value);
+                } else if (value.type->type == TYPE_DOUBLE) {
+                    printf("(double %f) ", value.float_value);
                 } else if (value.type->type == TYPE_BOOLEAN) {
                     printf("(bool %s) ", (value.int_value == 1) ? "TRUE" : "FALSE");
                 } else if (value.type->type == TYPE_STRINGLITERAL) {
                     printf("(strlit \"%s\") ", value.string_value.c_str());
-                } else if (value.type->type == TYPE_CHAR) {
-                    printf("(char \"%c\") ", value.int_value);
                 } else {
                     printf("(unprintable) ");
                     if (value.type->type == TYPE_RECORD) {
