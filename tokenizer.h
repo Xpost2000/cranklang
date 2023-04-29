@@ -144,8 +144,12 @@ struct Token {
     std::string stringvalue; /* (after escape processing) only for strings because you can escape characters. */
 
     union {
-        int32_t value32;
-        float   value32f;
+        // we'll use the highest precision value I can get away with
+        // and just downcast if I ever have to.
+        uintptr_t uvalueasptr;
+        uint64_t uvalue32;
+        int64_t value32;
+        double   value32f;
         char    valuechar;
     };
 };
