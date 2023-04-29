@@ -152,38 +152,38 @@ protected:
     }
 
     void output_function_declaration(Crank_Module& current_module, FILE* output, Crank_Declaration* decl) {
-        assert(decl->decl_type == DECL_OBJECT && "???");
-        output_type(current_module, output, decl->object_type);
-        printf("I am %s\n", decl->name.c_str());
-        fprintf(output, " %s", decl->name.c_str());
+        if (decl->expression) {
+            assert(!decl->is_externally_defined && "An externally defined function should not have a definition");
+            assert(decl->decl_type == DECL_OBJECT && "???");
+            output_type(current_module, output, decl->object_type);
+            printf("I am %s\n", decl->name.c_str());
+            fprintf(output, " %s", decl->name.c_str());
 
-        // array types are confusing for functions! LOL
-        // NOTE: investigate what happens
-        if (decl->object_type->array_dimensions.size()) {
-            for (auto dimension : decl->object_type->array_dimensions) {
-                fprintf(output, "[");
-                if (dimension != -1) {
-                    fprintf(output, "%d", dimension);
+            // array types are confusing for functions! LOL
+            // NOTE: investigate what happens
+            if (decl->object_type->array_dimensions.size()) {
+                for (auto dimension : decl->object_type->array_dimensions) {
+                    fprintf(output, "[");
+                    if (dimension != -1) {
+                        fprintf(output, "%d", dimension);
+                    }
+                    fprintf(output, "]");
                 }
-                fprintf(output, "]");
             }
-        }
 
-        printf("output param list\n");
-        fprintf(output, "(");
-        for (int i = 0; i < decl->object_type->call_parameters.size(); ++i) {
-            output_function_param_item(current_module, output, &decl->object_type->call_parameters[i]);
-            if (i+1 >= decl->object_type->call_parameters.size()) {}
-            else {
-                fprintf(output, ", ");
+            printf("output param list\n");
+            fprintf(output, "(");
+            for (int i = 0; i < decl->object_type->call_parameters.size(); ++i) {
+                output_function_param_item(current_module, output, &decl->object_type->call_parameters[i]);
+                if (i+1 >= decl->object_type->call_parameters.size()) {}
+                else {
+                    fprintf(output, ", ");
+                }
             }
-        }
-        fprintf(output, ")\n");
+            fprintf(output, ")\n");
 
-        printf("output body?\n");
-        {
-            if (decl->expression) {
-                assert(!decl->is_externally_defined && "An externally defined function should not have a definition");
+            printf("output body?\n");
+            {
                 auto body = decl->expression->value.body;
                 if (body) {
                     // assert(body && "this should have a body");
@@ -201,11 +201,9 @@ protected:
                         fprintf(output, "}\n");
                     }
                 }
-            } else {
-                fprintf(output, ";\n");
             }
+            printf("finish output body?\n");
         }
-        printf("finish output body?\n");
     }
 
     void output_statement(Crank_Module& current_module, FILE* output, Crank_Statement* statement) {
