@@ -102,7 +102,7 @@ void parse_declaration() {
     {
         char* test_parse =
             R"(
-name: int;
+variable: int;
 )";
         printf("Parsing: %s\n", test_parse);
         Tokenizer_State tokenizer(test_parse);
@@ -114,7 +114,7 @@ name: int;
     {
         char* test_parse =
             R"(
-name: int(a: int, y: int);
+function: int(a: int, y: int);
 )";
         printf("Parsing: %s\n", test_parse);
         Tokenizer_State tokenizer(test_parse);
@@ -126,7 +126,7 @@ name: int(a: int, y: int);
     {
         char* test_parse =
             R"(
-name: int*;
+single_pointer: int*;
 )";
         printf("Parsing: %s\n", test_parse);
         Tokenizer_State tokenizer(test_parse);
@@ -138,7 +138,7 @@ name: int*;
     {
         char* test_parse =
             R"(
-name: int***;
+triple_pointer: int***;
 )";
         printf("Parsing: %s\n", test_parse);
         Tokenizer_State tokenizer(test_parse);
@@ -150,7 +150,7 @@ name: int***;
     {
         char* test_parse =
             R"(
-name: int[3][4][5];
+array: int[3][4][5];
 )";
         printf("Parsing: %s\n", test_parse);
         Tokenizer_State tokenizer(test_parse);

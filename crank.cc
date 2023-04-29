@@ -384,7 +384,6 @@ Crank_Type* lookup_type(
             for (auto type : global_type_table) {
                 if (type->name == name) {
                     result = type;
-                    printf("%d a vs %d b\n", type->pointer_depth, pointer_depth);
                     if (type->pointer_depth != pointer_depth) {
                         result = nullptr;
                     }
@@ -476,10 +475,13 @@ struct Crank_Module {
     bool has_main = false;
 };
 
+// This is basically just the param list for lookup_type.
+// so I should just refactor this out later.
 struct Crank_Type_Declaration { // NOTE: for semantic analysis. Not doing type system things here!
     std::string name;
     std::vector<int> array_dimensions;
     std::vector<Crank_Declaration> call_parameters;
+    int pointer_depth = 0;
     bool is_function = false;
 };
 
@@ -521,7 +523,7 @@ Error<Crank_Type_Declaration> read_type_declaration(Tokenizer_State& tokenizer) 
     auto name = tokenizer.read_next();
     if (name.type != TOKEN_SYMBOL) return Error<Crank_Type_Declaration>::fail("Bad type declaration.");
 
-    std::vector<int> array_dimensions;
+    std::vector<int> array_dimensions = {};
 
     // parse an array type
     printf("try to find array specifier\n");
@@ -563,13 +565,21 @@ Error<Crank_Type_Declaration> read_type_declaration(Tokenizer_State& tokenizer) 
         assert(tokenizer.read_next().type == TOKEN_RIGHT_PARENTHESIS);
     }
 
+    // parse pointers at the end
+    int pointer_depth = 0;
+    while (tokenizer.peek_next().type == TOKEN_MUL) {
+        tokenizer.read_next();
+        pointer_depth += 1;
+    }
+
     if (is_function) printf("Function decl found with %d parameters\n", call_parameters.size());
     Crank_Type_Declaration result;
 
-    result.name = name.string;
-    result.is_function = is_function;
+    result.name             = name.string;
+    result.is_function      = is_function;
     result.array_dimensions = array_dimensions;
     result.call_parameters  = call_parameters;
+    result.pointer_depth    = pointer_depth;
 
     return Error<Crank_Type_Declaration>::okay(result);
 }
@@ -1488,11 +1498,13 @@ Error<Inline_Decl> read_inline_declaration(Tokenizer_State& tokenizer) {
     auto type_entry = read_type_declaration(tokenizer);
     assert(type_entry.good && "Bad type entry?");
     printf("Checking decl type... (%s)\n", type_entry.value.name.c_str());
+    /* NOTE: replace this stuff. Should be a bit faster... */
     auto type = lookup_type(
         type_entry.value.name,
         type_entry.value.array_dimensions,
         type_entry.value.call_parameters,
-        type_entry.value.is_function
+        type_entry.value.is_function,
+        type_entry.value.pointer_depth
     );
     assert(type && "Type not found! Cannot resolve!");
 
