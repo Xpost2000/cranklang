@@ -321,6 +321,7 @@ bool type_decl_is_derivative(
         (is_function) ||
         (pointer_depth != 0);
 }
+
 Crank_Type* lookup_type(
     // NOTE: should make this Crank_Type_Declaration but okay
     std::string_view name,
@@ -417,10 +418,17 @@ struct Crank_Module {
 // so I should just refactor this out later.
 struct Crank_Type_Declaration { // NOTE: for semantic analysis. Not doing type system things here!
     std::string name;
-    std::vector<int> array_dimensions;
-    std::vector<Crank_Declaration> call_parameters;
+    std::vector<int> array_dimensions = {};
+    std::vector<Crank_Declaration> call_parameters = {};
     int pointer_depth = 0;
     bool is_function = false;
+
+    bool is_derivative() {
+        return ((array_dimensions.size() != 0) ||
+                (call_parameters.size() != 0) ||
+                (pointer_depth != 0) ||
+                (is_function)); 
+    }
 };
 
 // -1 is bad
