@@ -308,31 +308,27 @@ Crank_Type* register_new_type(
  *
  * NOTE: need to rework this for when I actually use real modules which require lookup
  */
-Crank_Type* lookup_type(
-    // NOTE: should make this type-declaration but okay
+
+bool type_decl_is_derivative(
     std::string_view name,
     std::vector<int> array_dimensions={},
     std::vector<Crank_Declaration> call_parameters={},
     bool is_function = false,
     int pointer_depth = 0
 ) {
-    // NOTE: when looking up an array variant
-    //       type.
-    //
-    //
-    // I do consider them "separate" types (as in they produce new
-    // type entries, as I'm not sure of how else to handle them),
-    //
-    // however they are special cased.
-    // NOTE: array types will be created dynamically unlike normal types.
-    //
-    // Array dimensions depend on their base type to exist,
-    // so we will look up if the same name without the array specifier
-    // exists first.
-
-    // NOTE: this should be a conjunctional test like a bunch of ANDs
-    // but this ordering works for the programs I am writing.
-
+    return (array_dimensions.size() != 0) ||
+        (call_parameters.size() != 0) ||
+        (is_function) ||
+        (pointer_depth != 0);
+}
+Crank_Type* lookup_type(
+    // NOTE: should make this Crank_Type_Declaration but okay
+    std::string_view name,
+    std::vector<int> array_dimensions={},
+    std::vector<Crank_Declaration> call_parameters={},
+    bool is_function = false,
+    int pointer_depth = 0
+) {
     printf("Checking for %.*s, (array dimens: %d), (call params: %d), (isfunc: %d), (ptrdepth: %d)\n",
            unwrap_string_view(name),
            array_dimensions.size(),
@@ -341,27 +337,22 @@ Crank_Type* lookup_type(
            pointer_depth
     );
 
-    if (is_function || call_parameters.size() > 0) { // remarkably similar to the array case.
-        printf("Checking against function types?");
-        Crank_Type* result = nullptr;
+    // check for the base type
+    Crank_Type* result = nullptr;
+    if (type_decl_is_derivative(name, array_dimensions, call_parameters, is_function, pointer_depth) && lookup_type(name)) {
+        // checking derivative types
         for (auto type : global_type_table) {
-            if (!type->is_function) continue;
-            if (type->name == name) {
-                result = type;
-                // still need to check array size just in case.
-                if (type->array_dimensions.size() == array_dimensions.size()) {
-                    for (int i = 0; i < type->array_dimensions.size(); ++i) {
-                        if (type->array_dimensions[i] != array_dimensions[i]) {
-                            result = nullptr;
-                        }
-                    }
-                } else {
-                    result = nullptr;
-                }
+            if (type->name != name) {
+                result = nullptr;
+                continue;
+            }
 
-                // check types.
+            // possible match, start checking individual parts
+            result = type;
+
+            if (is_function == type->is_function) {
                 if (type->call_parameters.size() == call_parameters.size()) {
-                    for (int i = 0; i < type->call_parameters.size(); ++i) {
+                    for (int i = 0; i < type->call_parameters.size() && result; ++i) {
                         auto& type_param_a = type->call_parameters[i];
                         auto& type_param_b = call_parameters[i];
 
@@ -372,102 +363,35 @@ Crank_Type* lookup_type(
                 } else {
                     result = nullptr;
                 }
+            } else {
+                result = nullptr;
             }
-        }
 
-        if (!result) {
-            // register the function type.
-            result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters, true, pointer_depth);
-            printf("Register new function type\n");
-        }
-
-        printf("Found type match(functionpointer).\n");
-        return result;
-    }
-
-    if (pointer_depth > 0) {
-        printf("looking up pointer type\n");
-        if (lookup_type(name)) {
-            printf("found base type\n");
-            Crank_Type* result = nullptr;
-            for (auto type : global_type_table) {
-                if (type->name == name) {
-                    result = type;
-                    printf("pointer depth: %d vs %d\n", type->pointer_depth, pointer_depth);
-                    if (type->pointer_depth != pointer_depth) {
+            if (type->array_dimensions.size() == array_dimensions.size()) {
+                for (int i = 0; i < type->array_dimensions.size() && result; ++i) {
+                    if (type->array_dimensions[i] != array_dimensions[i]) {
                         result = nullptr;
                     }
-                } else {
-                    result = nullptr;
                 }
-
-                if (result) { break; }
+            } else {
+                result = nullptr;
             }
 
-            if (!result) {
-                // register the arrayed version of the type.
-                // it will be cached. This is not the best way to do the type
-                // system. However arrays are distinct types which is a sane thing
-                // to do imo.
-
-                // NOTE:
-                // Arrays share the same "base value_type" as their
-                // scalar counterpart.
-                result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters, is_function, pointer_depth);
-                printf("Register new pointer type\n");
+            if (type->pointer_depth != pointer_depth) {
+                result = nullptr;
+                continue;
             }
 
-            printf("Found type match(ptr).\n");
-            return result;
-        } else {
-            return nullptr;
+            if (result) return result;
+        }
+
+        if (result == nullptr) {
+            // register the derivative type.
+            result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters, is_function, pointer_depth);
         }
     }
 
-    if (array_dimensions.size() > 0) {
-        printf("looking up array\n");
-        if (lookup_type(name)) {
-            printf("found base type\n");
-            Crank_Type* result = nullptr;
-            for (auto type : global_type_table) {
-                if (type->name == name) {
-                    result = type;
-                    if (type->array_dimensions.size() == array_dimensions.size()) {
-                        for (int i = 0; i < type->array_dimensions.size(); ++i) {
-                            if (type->array_dimensions[i] != array_dimensions[i]) {
-                                result = nullptr;
-                            }
-                        }
-                    } else {
-                        result = nullptr;
-                    }
-
-                    if (result) { break; }
-                }
-            }
-
-            if (!result) {
-                // register the arrayed version of the type.
-                // it will be cached. This is not the best way to do the type
-                // system. However arrays are distinct types which is a sane thing
-                // to do imo.
-
-                // NOTE:
-                // Arrays share the same "base value_type" as their
-                // scalar counterpart.
-                result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters, is_function, pointer_depth);
-                printf("Register new array type\n");
-            }
-
-            printf("Found type match(arrdimens).\n");
-            return result;
-        } else {
-            return nullptr;
-        }
-    }
-
-    // check for name type
-    {
+    if (!result) {
         for (auto type : global_type_table) {
             if (type->name == name) {
                 return type;
@@ -475,7 +399,7 @@ Crank_Type* lookup_type(
         }
     }
 
-    return nullptr;
+    return result;
 }
 
 struct Crank_Module {
