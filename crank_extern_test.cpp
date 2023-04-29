@@ -80,7 +80,12 @@ int  MessageBoxA(void * hwnd, char * lptext, char * caption, uint  type);}; // e
 int  crank_mainpoint_entry(int  argc, std::string  arguments[]);
 int  crank_mainpoint_entry(int  argc, std::string  arguments[])
 {
-MessageBoxA(0, "Hello World", "Hello Title", 0);return 0;
+MessageBoxA(0, "Hello World", "Hello Title", 0);int  countdown = argc-1;
+;while (countdown>0) 
+{
+MessageBoxA(0, "Here's a message", "More titles?", 0);countdown-=1;}
+
+return 0;
 }
 
 /**

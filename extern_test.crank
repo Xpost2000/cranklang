@@ -2,5 +2,11 @@ message_box : extern("MessageBoxA") int(hwnd: void*, lptext: char*, caption: cha
 
 main: int(argc: int, arguments: strlit[]) {
       message_box(0, "Hello World", "Hello Title", 0);
+
+      countdown: int = argc-1;
+      while countdown > 0 {
+            message_box(0, "Here's a message", "More titles?", 0);
+            countdown -= 1;
+      }
       return 0;
 };
