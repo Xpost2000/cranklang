@@ -1,4 +1,4 @@
-R"(
+
 /**
  * This preamble is for default types
  * and the headers of the language.
@@ -71,4 +71,45 @@ typedef int16_t s16;
 typedef int8_t  s8;
 
 typedef u32 uint;
-)"
+extern "C" {
+int  MessageBoxA(void * hwnd, char * lptext, char * caption, uint  type);}; // end extern "C" 
+
+extern "C" {
+int  Beep(int  freq, int  duration);}; // end extern "C" 
+
+extern "C" {
+s64  time(void * ptr);}; // end extern "C" 
+
+extern "C" {
+void  srand(uint  seed);}; // end extern "C" 
+
+extern "C" {
+int  rand();}; // end extern "C" 
+
+int  crank_mainpoint_entry(int  argc, std::string  arguments[]);
+int  crank_mainpoint_entry(int  argc, std::string  arguments[])
+{
+MessageBoxA(0, "Hello World", "Hello Title", 0);srand(time(0));int  countdown = argc-1;
+;while (countdown>0) 
+{
+MessageBoxA(0, "Here's a message", "More titles?", 0);Beep(rand()%400+500, 1200);MessageBoxA(0, "I should've beeped", "More titles?", 0);countdown-=1;}
+
+return 0;
+}
+
+/**
+   This file is copy and pasted wholesale,
+
+   DO NOT TOUCH ME!
+
+   ASSUMED std::string is usable, and vector!
+**/
+
+int main(int argc, char** argv) {
+    std::vector<std::string> arguments;
+    for (int i = 0; i < argc; ++i) {
+        arguments.push_back(argv[i]);
+    }
+
+    return crank_mainpoint_entry(arguments.size(), arguments.data());
+}

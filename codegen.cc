@@ -186,12 +186,14 @@ protected:
             }
         }
     }
+
     void output_unary_expression(Crank_Module& current_module, FILE* output, Crank_Expression* expression) {
         if (expression) {
             fprintf(output, "%s", Crank_Expression_Operator_string_table[expression->operation]);
             output_expression(current_module, output, expression->unary.value);
         }
     }
+
     void output_binary_expression(Crank_Module& current_module, FILE* output, Crank_Expression* expression) {
         if (expression->operation == OPERATOR_ARRAY_INDEX) {
             output_expression(current_module, output, expression->binary.first);

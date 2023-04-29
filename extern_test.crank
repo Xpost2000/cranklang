@@ -1,12 +1,24 @@
 message_box : extern("MessageBoxA") int(hwnd: void*, lptext: char*, caption: char*, type: uint);
+beep_win32 : extern("Beep") int(freq: int, duration: int);
+time : extern s64(ptr: void*);
+srand : extern void(seed: uint);
+rand : extern int();
+
+// yeah that's a weird quirk of the language. I need to output errors lol.
 
 main: int(argc: int, arguments: strlit[]) {
       message_box(0, "Hello World", "Hello Title", 0);
 
+      srand(time(0));
+
       countdown: int = argc-1;
       while countdown > 0 {
             message_box(0, "Here's a message", "More titles?", 0);
+            beep_win32(rand() % 400 + 500, 1200);
+            // beep_win32(1200, 1200);
+            message_box(0, "I should've beeped", "More titles?", 0);
             countdown -= 1;
       }
+
       return 0;
 };

@@ -1814,7 +1814,7 @@ int main(int argc, char** argv){
                     return 0;
                 } else if (strcmp(arg_string, "output") == 0) {
                     char* output = argv[++i];
-                    output_name = std::string("output");
+                    output_name = std::string(output);
                 } else if (strcmp(arg_string, "keepcpp") == 0) {
                     keep_cplusplus = true;
                 }
