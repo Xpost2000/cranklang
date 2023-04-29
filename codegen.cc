@@ -4,54 +4,56 @@
 class Crank_Codegen {
 protected:
     // implement these as separate passes.
-    virtual void output_preamble(FILE* output) = 0;
-    virtual void output_import(FILE* output, Crank_Module* module) = 0;
-    virtual void output_type(FILE* output, Crank_Type* type) = 0;
+    virtual void output_preamble(Crank_Module& current_module, FILE* output) = 0;
+    virtual void output_import(Crank_Module& current_module, FILE* output, Crank_Module* module) = 0;
+    virtual void output_type(Crank_Module& current_module, FILE* output, Crank_Type* type) = 0;
 
     // we're going to separate function declaration passes
     // and non function declaration passes because some language transpile
     // targets don't have out of order initialization!
 
-    virtual void output_value(FILE* output, Crank_Value* value) = 0;
-    virtual void output_unary_expression(FILE* output, Crank_Expression* expression) = 0;
-    virtual void output_binary_expression(FILE* output, Crank_Expression* expression) = 0;
+    virtual void output_value(Crank_Module& current_module, FILE* output, Crank_Value* value) = 0;
+    virtual void output_unary_expression(Crank_Module& current_module, FILE* output, Crank_Expression* expression) = 0;
+    virtual void output_binary_expression(Crank_Module& current_module, FILE* output, Crank_Expression* expression) = 0;
 
-    virtual void output_declaration(FILE* output, Crank_Declaration* decl) = 0;
-    virtual void output_function_declaration(FILE* output, Crank_Declaration* decl) = 0;
+    virtual void output_declaration(Crank_Module& current_module, FILE* output, Crank_Declaration* decl) = 0;
+    virtual void output_function_declaration(Crank_Module& current_module, FILE* output, Crank_Declaration* decl) = 0;
 
-    virtual void output_statement(FILE* output, Crank_Statement* expression) = 0;
+    virtual void output_statement(Crank_Module& current_module, FILE* output, Crank_Statement* expression) = 0;
 
-    void output_expression(FILE* output, Crank_Expression* expression) {
+    void output_expression(Crank_Module& current_module, FILE* output, Crank_Expression* expression) {
         if (expression) {
             switch (expression->type) {
                 case EXPRESSION_VALUE: {
-                    output_value(output, &expression->value);
+                    output_value(current_module, output, &expression->value);
                 } break;
                 case EXPRESSION_UNARY: {
-                    output_unary_expression(output, expression);
+                    output_unary_expression(current_module, output, expression);
                 } break;
                 case EXPRESSION_BINARY: {
-                    output_binary_expression(output, expression);
+                    output_binary_expression(current_module, output, expression);
                 } break;
             }
         }
     }
 
-    virtual void output_entry_point(FILE* output) {}
+    virtual void output_entry_point(Crank_Module& current_module, FILE* output) {}
 
 public:
     Crank_Codegen() {}
     ~Crank_Codegen() {}
+
+    // note keep set of modules.
     void output_module(Crank_Module& module) {
         auto module_file_name = get_module_compiled_name(module);
         FILE* file = fopen(module_file_name.c_str(), "wb+");
 
         printf("Outputting preamble\n");
-        output_preamble(file);
+        output_preamble(module, file);
 
         printf("Outputting imports!\n");
         for (auto& import : module.imports) {
-            output_import(file, import);
+            output_import(module, file, import);
         }
 
         printf("Outputting declarations!\n");
@@ -59,7 +61,7 @@ public:
             if (decl.name == "main") {
                 decl.name = "crank_mainpoint_entry";
             }
-            output_declaration(file, &decl);
+            output_declaration(module, file, &decl);
         }
 
         for (auto& decl : module.decls) {
@@ -69,12 +71,12 @@ public:
                 if (decl.name == "main") {
                     decl.name = "crank_mainpoint_entry";
                 }
-                output_function_declaration(file, &decl);
+                output_function_declaration(module, file, &decl);
             }
         }
 
         if (module.has_main) {
-            output_entry_point(file);
+            output_entry_point(module, file);
         }
 
         fclose(file);
@@ -94,13 +96,21 @@ public:
     Crank_Codegen_Partial_CStyleLanguage() {}
     ~Crank_Codegen_Partial_CStyleLanguage() {}
 protected:
-    void output_value(FILE* output, Crank_Value* value) {
+    void output_value(Crank_Module& current_module, FILE* output, Crank_Value* value) {
         if (value->value_type == VALUE_TYPE_SYMBOL) {
-            fprintf(output, "%s", value->symbol_name.c_str());
+            // Check for external names to remap
             if (value->is_function_call) {
+                // lookup it's definition.
+                fprintf(output, "%s", value->symbol_name.c_str());
+            } else {
+                fprintf(output, "%s", value->symbol_name.c_str());
+            }
+
+            if (value->is_function_call) {
+                
                 fprintf(output, "(");
                 for (int i = 0; i < value->call_parameters.size(); ++i) {
-                    output_expression(output, value->call_parameters[i]);
+                    output_expression(current_module, output, value->call_parameters[i]);
                     if (i+1 >= value->call_parameters.size()) {
                     } else {
                         fprintf(output, ", ");
@@ -117,8 +127,7 @@ protected:
             if (value->array_elements.size()) {
                 fprintf(output, "{");
                 for (int i = 0; i < value->array_elements.size(); ++i) {
-                    // output_value(output, &value->array_elements[i]);
-                    output_expression(output, value->array_elements[i]);
+                    output_expression(current_module, output, value->array_elements[i]);
                     if (i+1 >= value->array_elements.size()) {
                         
                     } else {
@@ -172,26 +181,26 @@ protected:
             }
         }
     }
-    void output_unary_expression(FILE* output, Crank_Expression* expression) {
+    void output_unary_expression(Crank_Module& current_module, FILE* output, Crank_Expression* expression) {
         if (expression) {
             fprintf(output, "%s", Crank_Expression_Operator_string_table[expression->operation]);
-            output_expression(output, expression->unary.value);
+            output_expression(current_module, output, expression->unary.value);
         }
     }
-    void output_binary_expression(FILE* output, Crank_Expression* expression) {
+    void output_binary_expression(Crank_Module& current_module, FILE* output, Crank_Expression* expression) {
         if (expression->operation == OPERATOR_ARRAY_INDEX) {
-            output_expression(output, expression->binary.first);
+            output_expression(current_module, output, expression->binary.first);
             fprintf(output, "[");
-            output_expression(output, expression->binary.second);
+            output_expression(current_module, output, expression->binary.second);
             fprintf(output, "]");
         } else if (expression->operation == OPERATOR_PROPERTY_ACCESS) {
-            output_expression(output, expression->binary.first);
+            output_expression(current_module, output, expression->binary.first);
             fprintf(output, ".", Crank_Expression_Operator_string_table[expression->operation]);
-            output_expression(output, expression->binary.second);
+            output_expression(current_module, output, expression->binary.second);
         } else {
-            output_expression(output, expression->binary.first);
+            output_expression(current_module, output, expression->binary.first);
             fprintf(output, "%s", Crank_Expression_Operator_string_table[expression->operation]);
-            output_expression(output, expression->binary.second);
+            output_expression(current_module, output, expression->binary.second);
         }
     }
 };

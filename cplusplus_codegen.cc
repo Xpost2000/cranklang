@@ -15,7 +15,7 @@ public:
         return "crank_" + module.module_name + ".cpp";
     }
 protected:
-    void output_preamble(FILE* output) {
+    void output_preamble(Crank_Module& current_module, FILE* output) {
         /**
            NOTE: this is a separate but identical file. Mostly since I don't want
            to add additional build steps.
@@ -27,13 +27,13 @@ protected:
         fprintf(output, "%s", crank_preamble_cpp);
     }
     
-    void output_import(FILE* output, Crank_Module* module) {
+    void output_import(Crank_Module& current_module, FILE* output, Crank_Module* module) {
         // no imports yet! nothing!
     }
 
     // idk how to output function pointers quite yet!
     // so that's undefined behavior!
-    void output_type(FILE* output, Crank_Type* type) {
+    void output_type(Crank_Module& current_module, FILE* output, Crank_Type* type) {
         printf("output type\n");
         while (type->rename_of) type = type->rename_of; // just in case anything weird happens...
         if (type->type == TYPE_STRINGLITERAL) {
@@ -54,10 +54,10 @@ protected:
     }
 
     // STUPID TODO: REMOVE OR FIX
-    void output_function_param_item(FILE* output, Crank_Declaration* decl) {
+    void output_function_param_item(Crank_Module& current_module, FILE* output, Crank_Declaration* decl) {
         if (decl->decl_type == DECL_OBJECT) {
             printf("outputting object\n");
-            output_type(output, decl->object_type);
+            output_type(current_module, output, decl->object_type);
             fprintf(output, " %s", decl->name.c_str());
             if (decl->object_type->array_dimensions.size()) {
                 for (auto dimension : decl->object_type->array_dimensions) {
@@ -76,31 +76,36 @@ protected:
             } else {
                 if (decl->has_value) {
                     fprintf(output, " = ");
-                    // output_value(output, &decl->value);
-                    output_expression(output, decl->expression);
+                    output_expression(current_module, output, decl->expression);
                 }
             }
         } else {
             printf("outputting typedef\n");
             if (decl->object_type->type == TYPE_RENAME) {
                 fprintf(output, "typedef %s ", decl->name.c_str());
-                output_type(output, decl->object_type->rename_of);
+                output_type(current_module, output, decl->object_type->rename_of);
             } else {
                 fprintf(output, "struct %s {", decl->name.c_str());
                 for (auto& member : decl->object_type->members) {
-                    output_declaration(output, &member);
+                    output_declaration(current_module, output, &member);
                 }
                 fprintf(output, "};", decl->name.c_str());
             }
         }
     }
 
-    void output_declaration(FILE* output, Crank_Declaration* decl) {
+    void output_declaration(Crank_Module& current_module, FILE* output, Crank_Declaration* decl) {
         printf("outputting decl\n");
         if (decl->decl_type == DECL_OBJECT) {
             printf("outputting object\n");
-            output_type(output, decl->object_type);
-            fprintf(output, " %s", decl->name.c_str());
+            output_type(current_module, output, decl->object_type);
+
+            if (decl->is_externally_defined && decl->extern_definition.linkage_name != "") {
+                fprintf(output, " %s", decl->extern_definition.linkage_name.c_str());
+            } else {
+                fprintf(output, " %s", decl->name.c_str());
+            }
+
             if (decl->object_type->array_dimensions.size()) {
                 for (auto dimension : decl->object_type->array_dimensions) {
                     fprintf(output, "[");
@@ -114,7 +119,7 @@ protected:
             if (decl->object_type->is_function) {
                 fprintf(output, "(");
                 for (int i = 0; i < decl->object_type->call_parameters.size(); ++i) {
-                    output_function_param_item(output, &decl->object_type->call_parameters[i]);
+                    output_function_param_item(current_module, output, &decl->object_type->call_parameters[i]);
                     if (i+1 >= decl->object_type->call_parameters.size()) {}
                     else {
                         fprintf(output, ", ");
@@ -124,8 +129,7 @@ protected:
             } else {
                 if (decl->has_value) {
                     fprintf(output, " = ");
-                    // output_value(output, &decl->value);
-                    output_expression(output, decl->expression);
+                    output_expression(current_module, output, decl->expression);
                 } else {
                     fprintf(output, " = {}");
                 }
@@ -134,11 +138,11 @@ protected:
             printf("outputting typedef\n");
             if (decl->object_type->type == TYPE_RENAME) {
                 fprintf(output, "typedef %s ", decl->name.c_str());
-                output_type(output, decl->object_type->rename_of);
+                output_type(current_module, output, decl->object_type->rename_of);
             } else {
                 fprintf(output, "struct %s {", decl->name.c_str());
                 for (auto& member : decl->object_type->members) {
-                    output_declaration(output, &member);
+                    output_declaration(current_module, output, &member);
                 }
                 fprintf(output, "};", decl->name.c_str());
             }
@@ -147,9 +151,9 @@ protected:
         fprintf(output, "\n");
     }
 
-    void output_function_declaration(FILE* output, Crank_Declaration* decl) {
+    void output_function_declaration(Crank_Module& current_module, FILE* output, Crank_Declaration* decl) {
         assert(decl->decl_type == DECL_OBJECT && "???");
-        output_type(output, decl->object_type);
+        output_type(current_module, output, decl->object_type);
         printf("I am %s\n", decl->name.c_str());
         fprintf(output, " %s", decl->name.c_str());
 
@@ -168,7 +172,7 @@ protected:
         printf("output param list\n");
         fprintf(output, "(");
         for (int i = 0; i < decl->object_type->call_parameters.size(); ++i) {
-            output_function_param_item(output, &decl->object_type->call_parameters[i]);
+            output_function_param_item(current_module, output, &decl->object_type->call_parameters[i]);
             if (i+1 >= decl->object_type->call_parameters.size()) {}
             else {
                 fprintf(output, ", ");
@@ -179,6 +183,7 @@ protected:
         printf("output body?\n");
         {
             if (decl->expression) {
+                assert(!decl->is_externally_defined && "An externally defined function should not have a definition");
                 auto body = decl->expression->value.body;
                 if (body) {
                     // assert(body && "this should have a body");
@@ -188,7 +193,7 @@ protected:
                             fprintf(output, "return ");
                         }
                     }
-                    output_statement(output, body);
+                    output_statement(current_module, output, body);
                     if (body->type != STATEMENT_BLOCK) {
                         if (body->type == STATEMENT_EXPRESSION) {
                             fprintf(output, ";\n");
@@ -203,59 +208,59 @@ protected:
         printf("finish output body?\n");
     }
 
-    void output_statement(FILE* output, Crank_Statement* statement) {
+    void output_statement(Crank_Module& current_module, FILE* output, Crank_Statement* statement) {
         switch (statement->type) {
             case STATEMENT_BLOCK: {
                 fprintf(output, "{\n");
                 for (auto& inner_statement : statement->block_statement.body) {
-                    output_statement(output, inner_statement);
+                    output_statement(current_module, output, inner_statement);
                 }
                 fprintf(output, "}\n");
             } break;
             case STATEMENT_IF: {
                 fprintf(output, "if (");
-                output_expression(output, statement->if_statement.condition);
+                output_expression(current_module, output, statement->if_statement.condition);
                 fprintf(output, ") ");
                 fprintf(output, "\n");
                 if (statement->if_statement.true_branch) {
-                    output_statement(output, statement->if_statement.true_branch);
+                    output_statement(current_module, output, statement->if_statement.true_branch);
                 }
                 fprintf(output, "\n");
                 if (statement->if_statement.false_branch) {
                     fprintf(output, " else ");
-                    output_statement(output, statement->if_statement.false_branch);
+                    output_statement(current_module, output, statement->if_statement.false_branch);
                 }
                 fprintf(output, "\n");
             } break;
             case STATEMENT_WHILE: {
                 fprintf(output, "while (");
-                output_expression(output, statement->while_statement.condition);
+                output_expression(current_module, output, statement->while_statement.condition);
                 fprintf(output, ") ");
                 fprintf(output, "\n");
                 if (statement->while_statement.action) {
-                    output_statement(output, statement->while_statement.action);
+                    output_statement(current_module, output, statement->while_statement.action);
                 }
                 fprintf(output, "\n");
             } break;
             case STATEMENT_EXPRESSION: {
                 assert(statement->expression_statement.expression);
-                output_expression(output, statement->expression_statement.expression);
+                output_expression(current_module, output, statement->expression_statement.expression);
                 fprintf(output, ";");
             } break;
             case STATEMENT_DECLARATION: {
-                output_declaration(output, statement->declaration_statement.declaration);
+                output_declaration(current_module, output, statement->declaration_statement.declaration);
                 fprintf(output, ";");
             } break;
             case STATEMENT_RETURN: {
                 fprintf(output, "return ");
-                output_expression(output, statement->return_statement.result);
+                output_expression(current_module, output, statement->return_statement.result);
                 fprintf(output, ";\n");
             } break;
         }
         printf("\n");
     }
 
-    void output_value(FILE* output, Crank_Value* value) {
+    void output_value(Crank_Module& current_module, FILE* output, Crank_Value* value) {
         bool overrode_behavior = false;
         if (value->value_type == VALUE_TYPE_LITERAL) {
             auto typeof_object = value->type;
@@ -267,12 +272,12 @@ protected:
         }
 
         if (!overrode_behavior) {
-            Crank_Codegen_Partial_CStyleLanguage::output_value(output, value);
+            Crank_Codegen_Partial_CStyleLanguage::output_value(current_module, output, value);
         }
     }
 
     // MAIN should have specific signature but whatever!
-    void output_entry_point(FILE* output) {
+    void output_entry_point(Crank_Module& current_module, FILE* output) {
         /** for C++ **/
         auto crank_main_point_entry_cpp =
             #include "crank-cpp-runtime/crank_main_point_entry.cpp"
