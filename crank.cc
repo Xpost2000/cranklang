@@ -1770,6 +1770,16 @@ void register_default_types() {
 
 #include "os_process_win32.c"
 
+// TODO: posix/linux
+
+void delete_file(const char* where) {
+#ifdef _WIN32
+    DeleteFile(where);
+#else
+    remove(where);
+#endif
+}
+
 #include "debug_print.cc"
 #include "crank_parsing_tests.cc"
 
@@ -1782,41 +1792,86 @@ int main(int argc, char** argv){
     run_all_tests();
 #else
     std::vector<std::string> module_names;
+    std::vector<std::string> linkage_lib_names;
     Crank_Codegen* generator = new CPlusPlusCodeGenerator();
+    std::string output_name = "a";
+    bool keep_cplusplus = false;
+
     for (int i = 1; i < argc; ++i) {
-        std::string filename = argv[i];
-        File_Buffer buffer = File_Buffer(filename.c_str());
+        char* current_argument = argv[i];
 
-        // TODO: I don't want to do this right now...
-        std::string module_name_hack;
-        for (auto& c : filename) {
-            if (c == '.') break;
-            module_name_hack += c;
-        }
-        auto e = load_module_from_source(module_name_hack, buffer.data);
-
-        if (e.good) {
-            printf("okay! outputting module!\n");
-            generator->output_module(e);
+        if (current_argument[0] == '-') {
+            if (current_argument[1] == '-') {
+                char* arg_string = current_argument+2;
+                if (strcmp(arg_string, "help") == 0) {
+                    printf("Crank does not give help right now. Sorry!\n");
+                } else if (strcmp(arg_string, "link") == 0) {
+                    char* link_library = argv[++i];
+                    linkage_lib_names.push_back(std::string(link_library));
+                } else if (strcmp(arg_string, "dotests") == 0) {
+                    printf("running tests, and quitting.\n");
+                    run_all_tests();
+                    return 0;
+                } else if (strcmp(arg_string, "output") == 0) {
+                    char* output = argv[++i];
+                    output_name = std::string("output");
+                } else if (strcmp(arg_string, "keepcpp") == 0) {
+                    keep_cplusplus = true;
+                }
+            }
         } else {
-            printf("not good! module bad!\n");
-            printf("%s\n", e.message);
-            break;
-        }
+            std::string filename = argv[i];
+            File_Buffer buffer = File_Buffer(filename.c_str());
 
-        module_names.push_back(generator->get_module_compiled_name(e));
+            if (buffer.data == nullptr) {
+                printf("No file named \"%s\"!\n", filename.c_str());
+                return -1;
+            }
+
+            // TODO: I don't want to do this right now...
+            std::string module_name_hack;
+            for (auto& c : filename) {
+                if (c == '.') break;
+                module_name_hack += c;
+            }
+            auto e = load_module_from_source(module_name_hack, buffer.data);
+
+            if (e.good) {
+                printf("okay! outputting module!\n");
+                generator->output_module(e);
+            } else {
+                printf("not good! module bad!\n");
+                printf("%s\n", e.message);
+                break;
+            }
+
+            module_names.push_back(generator->get_module_compiled_name(e));
+        }
     }
 
     if (module_names.size()) {
         // generated... now compile all the modules
-        std::string compile_string = "g++ -o test ";
+
+        // I should try to detect the tool chain that someone might have.
+        std::string compile_string = "g++ ";
+        compile_string += " -o " + output_name + " ";
+        for (auto l : linkage_lib_names) {
+            compile_string += " -l" + l;
+        }
         for (auto s : module_names) {
-            compile_string += s;
+            compile_string += s + " ";
         }
 
-        printf("calling c compiler\n");
+        printf("calling c compiler: %s\n", compile_string.c_str());
         os_process_shell_start_and_run_synchronously((char*)compile_string.c_str());
-        printf("enjoy.\n");
+
+        // delete all old files
+        if (!keep_cplusplus) {
+            printf("deleting temp C++ files.\n");
+            for (auto s : module_names) {
+                delete_file(s.c_str());
+            }
+        }
     }
 
     return 0;
