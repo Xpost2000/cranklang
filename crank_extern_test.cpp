@@ -78,7 +78,7 @@ int  MessageBoxA(void * hwnd, char * lptext, char * caption, uint  type);
 int  crank_mainpoint_entry(int  argc, std::string  arguments[]);
 int  crank_mainpoint_entry(int  argc, std::string  arguments[])
 {
-message_box(0, "Hello World", "Hello Title", 0);return 0;
+MessageBoxA(0, "Hello World", "Hello Title", 0);return 0;
 }
 
 /**

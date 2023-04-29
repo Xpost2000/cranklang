@@ -420,6 +420,26 @@ struct Crank_Module {
     bool has_main = false;
 };
 
+Crank_Declaration* crank_module_find_function_decl(Crank_Module& module, char* function_name) {
+    for (auto& decl : module.decls) {
+        if (decl.decl_type != DECL_OBJECT) {
+            continue;
+        }
+
+        if (decl.name != function_name) {
+            continue;
+        }
+
+        if (!decl.object_type->is_function) {
+            continue;
+        }
+
+        return &decl;
+    }
+
+    return nullptr;
+}
+
 // This is basically just the param list for lookup_type.
 // so I should just refactor this out later.
 struct Crank_Type_Declaration { // NOTE: for semantic analysis. Not doing type system things here!

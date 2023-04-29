@@ -101,7 +101,12 @@ protected:
             // Check for external names to remap
             if (value->is_function_call) {
                 // lookup it's definition.
-                fprintf(output, "%s", value->symbol_name.c_str());
+                auto decl = crank_module_find_function_decl(current_module, (char*)value->symbol_name.c_str());
+                if (decl->is_externally_defined && decl->extern_definition.linkage_name != "") {
+                    fprintf(output, "%s", decl->extern_definition.linkage_name.c_str());
+                } else {
+                    fprintf(output, "%s", value->symbol_name.c_str());
+                }
             } else {
                 fprintf(output, "%s", value->symbol_name.c_str());
             }
