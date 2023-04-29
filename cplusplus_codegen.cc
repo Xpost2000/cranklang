@@ -96,8 +96,13 @@ protected:
 
     void output_declaration(Crank_Module& current_module, FILE* output, Crank_Declaration* decl) {
         printf("outputting decl\n");
+        if (decl->is_externally_defined) {
+            fprintf(output, "extern \"C\" {\n");
+        }
+
         if (decl->decl_type == DECL_OBJECT) {
             printf("outputting object\n");
+
             output_type(current_module, output, decl->object_type);
 
             if (decl->is_externally_defined && decl->extern_definition.linkage_name != "") {
@@ -148,6 +153,9 @@ protected:
             }
         }
         fprintf(output, ";");
+        if (decl->is_externally_defined) {
+            fprintf(output, "}; // end extern \"C\" \n");
+        }
         fprintf(output, "\n");
     }
 

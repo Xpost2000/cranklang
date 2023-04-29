@@ -74,7 +74,9 @@ typedef int16_t s16;
 typedef int8_t  s8;
 
 typedef u32 uint;
-int  MessageBoxA(void * hwnd, char * lptext, char * caption, uint  type);
+extern "C" {
+int  MessageBoxA(void * hwnd, char * lptext, char * caption, uint  type);}; // end extern "C" 
+
 int  crank_mainpoint_entry(int  argc, std::string  arguments[]);
 int  crank_mainpoint_entry(int  argc, std::string  arguments[])
 {
