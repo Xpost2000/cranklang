@@ -183,7 +183,7 @@ array: int[3][4][5];
     {
         char* test_parse =
             R"(
-function: int(a: int, y: int) extern;
+function: extern int(a: int, y: int);
 )";
         printf("Parsing: %s\n", test_parse);
         Tokenizer_State tokenizer(test_parse);
@@ -194,7 +194,7 @@ function: int(a: int, y: int) extern;
     {
         char* test_parse =
             R"(
-function: int(a: int, y: int) extern("link_name_in_other_language");
+function: extern("link_name_in_other_language") int(a: int, y: int);
 )";
         printf("Parsing: %s\n", test_parse);
         Tokenizer_State tokenizer(test_parse);

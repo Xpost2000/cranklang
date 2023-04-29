@@ -1434,8 +1434,14 @@ bool do_array_typecheck(Crank_Type* type,
 }
 
 // Any form that resembles a variable declaration.
+/*
+ *
+ * NAME : (decorators? like extern/const/modifiers) (typedecl)
+ */
 Error<Crank_Declaration> read_inline_declaration(Tokenizer_State& tokenizer) {
-    Crank_Declaration result;
+    Crank_Declaration result = {};
+
+    result.decl_type = DECL_OBJECT;
     result.has_value = false;
 
     if (tokenizer.peek_next().type != TOKEN_SYMBOL) {
@@ -1448,6 +1454,27 @@ Error<Crank_Declaration> read_inline_declaration(Tokenizer_State& tokenizer) {
     auto colon = tokenizer.peek_next();
     if (colon.type != TOKEN_COLON) return Error<Crank_Declaration>::fail("not a colon, cannot be a decl");
     tokenizer.read_next();
+
+    auto extern_token = tokenizer.peek_next();
+    printf("Trying to parse for extern(%.*s)\n", unwrap_string_view(extern_token.string));
+    // if I were to output native code, I'd assume standard C linkage for now.
+    if (extern_token.type == TOKEN_SYMBOL && extern_token.string == "extern") {
+        tokenizer.read_next();
+        printf("Object is an extern declaration!\n");
+        /*
+         * This is technically more important for when we need to check if all functions are defined.
+         */
+        result.is_externally_defined = true;
+
+        if (tokenizer.peek_next().type == TOKEN_LEFT_PARENTHESIS) {
+            tokenizer.read_next();
+            auto extern_linkage_name = tokenizer.read_next();
+            assert(extern_linkage_name.type == TOKEN_STRING);
+            result.extern_definition.linkage_name = extern_linkage_name.stringvalue;
+            printf("This object is linked as \"%s\"", result.extern_definition.linkage_name.c_str());
+            assert(tokenizer.read_next().type == TOKEN_RIGHT_PARENTHESIS && "Extern name param needs to be closed with a parenthesis!");
+        }
+    }
 
     auto type_entry = read_type_declaration(tokenizer);
     assert(type_entry.good && "Bad type entry?");
@@ -1603,14 +1630,7 @@ Error<Crank_Declaration> parse_variable_decl(Tokenizer_State& tokenizer) {
         return Error<Crank_Declaration>::fail("No declaration found?");
     }
 
-    Crank_Declaration decl;
-    decl.decl_type = DECL_OBJECT;
-    decl.object_type = inline_decl.value.object_type;
-    decl.array_dimensions = inline_decl.value.array_dimensions;
-    decl.name = inline_decl.value.name;
-    decl.has_value = inline_decl.value.has_value;
-    decl.expression = inline_decl.value.expression;
-    return Error<Crank_Declaration>::okay(decl);
+    return Error<Crank_Declaration>::okay(inline_decl.value);
 }
 
 /**
