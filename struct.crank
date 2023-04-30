@@ -1,0 +1,11 @@
+typedef RenamedInt as int;
+typedef Vector : struct {
+        x : int = 4;
+        y : int = 2;
+        z : int = 1;
+}
+
+main: int(argc: int, arguments: strlit[]) {
+      obj: Vector = Vector { z: 4, y: 3, x: 24 };
+      return 0;
+};

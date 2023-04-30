@@ -67,10 +67,6 @@ public:
         for (auto& decl : module.decls) {
             if (decl.object_type->is_function) {
                 printf("outputting function decl!\n");
-
-                if (decl.name == "main") {
-                    decl.name = "crank_mainpoint_entry";
-                }
                 output_function_declaration(module, file, &decl);
             }
         }

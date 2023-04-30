@@ -51,34 +51,14 @@
 
   A minimally useful language?
 
-  I need pointers
-
-  Wishlist, I need this to be able to do as much as C can first:
-
-  - Array Programming
-  - Lambdas/local functions
-  - Structure Extension
-  struct E {
-  int c; 
-  };
-  struct Z {
-  int a;
-  int b;
-  };
-  struct XY {
-  using Z;
-  using E;
-  };
-
-  This will be interesting to compile into C since I want this to allow for polymorphism in a weird way.
-  - Out of order implementation
-
-
-  - [X] Tokenizer done!
-
   TODO: Proper error handling takes a lot of code, and I don't have that
   much time so I've kinda stopped doing it at some point just to get sutff done
   faster.
+
+  NOTE: Crank is not going to support methods. It's not part of the MO, although it's not additionally
+  complicated...
+  NOTE: Crank is not supporting multiple declarations either. It probably could with slight changes to the parser
+  but it's not something I usually do or like...
 */
 #include "crank-cpp-runtime/crank_preamble.h"
 #include "tokenizer.h"
@@ -106,6 +86,12 @@ enum Crank_Types {
     TYPE_DOUBLE,
     TYPE_STRINGLITERAL,
     TYPE_RECORD, // NOT FULLY IMPLEMENTED
+
+    /* Not implemented yet! */
+    TYPE_UNION,
+    TYPE_ENUMERATION,
+    /* Not impleemented yet! */
+
     TYPE_VOID, // NOT IMPLEMENTED
     TYPE_RENAME, // typedef, this doesn't really have much significance, so I might remove this.
     TYPE_CHAR = TYPE_INTEGER8,
@@ -236,6 +222,13 @@ struct Crank_Type {
     int pointer_depth = 0;
     bool is_function = false;
     std::vector<Crank_Declaration> call_parameters;
+
+    /*
+     * This is for the "tagged" types like
+     * union/variant/struct/enum
+     *
+     * For enum, I will check to make sure that these are some form of integer type.
+     */
     std::vector<Crank_Declaration> members;
 };
 
@@ -1594,26 +1587,23 @@ bool read_record_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
 Error<Crank_Declaration> parse_typedef(Tokenizer_State& tokenizer) {
     auto name = tokenizer.read_next();
     if (name.type != TOKEN_SYMBOL) return Error<Crank_Declaration>::fail("Typedef name is not a symbol!");
-    auto colon_separator = tokenizer.read_next();
-    if (colon_separator.type != TOKEN_COLON) return Error<Crank_Declaration>::fail("Need separator!");
-    auto determiner = tokenizer.peek_next();
-
-    if (determiner.type == TOKEN_SYMBOL) {
-        // typedef of existing. Rename!
+    auto separator = tokenizer.read_next();
+    if (separator.type == TOKEN_SYMBOL && separator.string == "as") {
+        // typedef rename
         auto type_entry = read_type_declaration(tokenizer);
 
         if (!type_entry.good) return Error<Crank_Declaration>::fail(type_entry.message);
 
         Crank_Declaration typedecl;
         typedecl.decl_type = DECL_TYPE;
-        typedecl.object_type = lookup_type(determiner.string);
+        typedecl.object_type = lookup_type(type_entry.value.name);
         typedecl.name = name.string;
         typedecl.array_dimensions = type_entry.value.array_dimensions;
 
         // NOTE: if we rename based off an array type
         // there's no need to list the array dimensions.
         auto new_type = register_new_type(typedecl.name, TYPE_RENAME);
-        new_type->rename_of = lookup_type(determiner.string, typedecl.array_dimensions);
+        new_type->rename_of = lookup_type(type_entry.value.name, typedecl.array_dimensions);
         assert(new_type->rename_of && "Error! Typedefed type does not exist!");
 
         if (!typedecl.object_type) {
@@ -1622,25 +1612,39 @@ Error<Crank_Declaration> parse_typedef(Tokenizer_State& tokenizer) {
             return Error<Crank_Declaration>::fail("Cannot resolve type! Not known yet?");
         }
         printf("read typedef rename\n");
+        // this requires a semicolon.
+        assert(tokenizer.read_next().type == TOKEN_SEMICOLON);
         return Error<Crank_Declaration>::okay(typedecl);
-    } else if (determiner.type == TOKEN_LEFT_CURLY_BRACE) {
-        // record type.
+    } else if (separator.type == TOKEN_COLON) {
+        auto determiner = tokenizer.peek_next();
+        if (determiner.type != TOKEN_SYMBOL) return Error<Crank_Declaration>::fail("Need symbol descriptor to discriminate!");
         tokenizer.read_next();
+        assert(tokenizer.read_next().type == TOKEN_LEFT_CURLY_BRACE && "Invalid start to tagged item");
 
-        Crank_Declaration typedecl;
-        typedecl.decl_type = DECL_TYPE;
-        typedecl.object_type = register_new_type(name.string, TYPE_RECORD);
+        if (determiner.string == "struct") {
+            Crank_Declaration typedecl;
+            typedecl.decl_type = DECL_TYPE;
+            typedecl.name = name.string;
+            typedecl.object_type = register_new_type(name.string, TYPE_RECORD);
 
-        if (read_record_definition(typedecl.object_type, tokenizer)) {
-            printf("Read new record definition\n");
-            return Error<Crank_Declaration>::okay(typedecl);
+            if (read_record_definition(typedecl.object_type, tokenizer)) {
+                printf("Read new record definition\n");
+                return Error<Crank_Declaration>::okay(typedecl);
+            } else {
+                return Error<Crank_Declaration>::fail("Failed to read record definition");
+            }
+            // typedecl.array_dimensions;
+            typedecl.name = name.string;
+        } else if (determiner.string == "union") {
+            assert(!"Not union implemented yet!");
+        } else if (determiner.string == "enum") {
+            assert(!"Not enum implemented yet!");
         } else {
-            return Error<Crank_Declaration>::fail("Failed to read record definition");
+            return Error<Crank_Declaration>::fail("Invalid tag for typedef!");
         }
-        // typedecl.array_dimensions;
-        typedecl.name = name.string;
+    } else {
+        return Error<Crank_Declaration>::fail("Invalid token in typedef parsing.");
     }
-
 
     return Error<Crank_Declaration>::fail("Failed to parse typedef.");
 }
@@ -1702,8 +1706,9 @@ Error<Crank_Module> load_module_from_source(std::string module_name, std::string
                     auto new_typedef = parse_typedef(tokenizer);
                     if (!new_typedef.good) {
                         printf("%s\n", new_typedef.message);
-                    } else 
+                    } else {
                         module.decls.push_back(new_typedef);
+                    }
                 } else {
                     // TODO: Check for duplicates (IN THE SAME SCOPE!)
                     auto new_decl = parse_variable_decl(tokenizer);

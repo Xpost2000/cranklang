@@ -145,7 +145,7 @@ protected:
                 fprintf(output, "typedef %s ", decl->name.c_str());
                 output_type(current_module, output, decl->object_type->rename_of);
             } else {
-                fprintf(output, "struct %s {", decl->name.c_str());
+                fprintf(output, "struct %s { // test name\n", decl->name.c_str());
                 for (auto& member : decl->object_type->members) {
                     output_declaration(current_module, output, &member);
                 }
