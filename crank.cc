@@ -1,14 +1,8 @@
 /*
-  NOTE: It appears I am probably letting go of the interpreter idea, and just focusing on the transpiler.
-  To the best of it's ability, crank is still checking stuff so it is still an actual language.
-
   A small programming language transpiler. It's not really efficient
   it's just to figure out how to write a language by any means
   necessary. So there's an allocation festival thanks to all the
   std::string I use.
-
-  4/24/2023: Hmm, after a bit of reading I believe it is impertinent that I restructure
-  the "compiler" to only produce an AST that is unchecked...
 
   NOTE: I'm not deleting anything here because
   the OS will reclaim all memory, and it's only running until
@@ -17,13 +11,8 @@
   OPTIONAL/TODO: I would like better error reporting logic, but this isn't really about
   that (IE: the intent isn't to make a sane language to use, it's just "compiler" practice)
 
-
-  CODEGEN TODO:
-  Object literals are not considered because they were not there when I hacked a c++ code generator.
-
   TODO: 
   - Reserve key words
-  - Replace using Value to Expression in a lot of places.
   - Replace most instances of std::string
   There's too much copying that I'm not super comfortable with,
   but that's part of the clean up code.
@@ -32,9 +21,7 @@
   typechecked as of now! I am checking these functional changes
   in but invalid types are still allowed
   - Function decls will definitely not be typechecked yet
-  - Typedecls are mostly okay
   - Expressions are not properly type checked!
-  - Basic to C++ compiler (just compile types in I suppose)
 
   NOTE: have to refactor like all of this later...
   because it's not object oriented in the traditional sense.
@@ -257,8 +244,8 @@ Crank_Type* follow_typedef_chain(Crank_Type* type) {
 bool crank_type_match(Crank_Type* a, Crank_Type* b) {
 
     // Since I intern Crank_Types this is always okay.
-    printf("Crank_Type a (%p) (name: %s array_dim(n=%d))\n", a, a->name.c_str(), a->rename_of, a->array_dimensions.size());
-    printf("Crank_Type b (%p) (name: %s array_dim(n=%d))\n", b, b->name.c_str(), b->rename_of, b->array_dimensions.size());
+    _debugprintf("Crank_Type a (%p) (name: %s array_dim(n=%d))\n", a, a->name.c_str(), a->rename_of, a->array_dimensions.size());
+    _debugprintf("Crank_Type b (%p) (name: %s array_dim(n=%d))\n", b, b->name.c_str(), b->rename_of, b->array_dimensions.size());
 
     a = follow_typedef_chain(a);
     b = follow_typedef_chain(b);
@@ -339,7 +326,7 @@ Crank_Type* lookup_type(
     bool is_variadic = false,
     int pointer_depth = 0
 ) {
-    printf("Checking for %.*s, (array dimens: %d), (call params: %d), (isfunc: %d), (ptrdepth: %d)\n",
+    _debugprintf("Checking for %.*s, (array dimens: %d), (call params: %d), (isfunc: %d), (ptrdepth: %d)\n",
            unwrap_string_view(name),
            array_dimensions.size(),
            call_parameters.size(),
@@ -499,7 +486,7 @@ Error<Crank_Type_Declaration> read_type_declaration(Tokenizer_State& tokenizer) 
     std::vector<int> array_dimensions = {};
 
     // parse an array type
-    printf("try to find array specifier\n");
+    _debugprintf("try to find array specifier\n");
     while (true) {
         int current_dimension = -1;
         int read_result = read_array_specifier(tokenizer, &current_dimension);
@@ -511,27 +498,27 @@ Error<Crank_Type_Declaration> read_type_declaration(Tokenizer_State& tokenizer) 
             return Error<Crank_Type_Declaration>::fail("Fail to read array specifier.");
         }
     }
-    printf("parsed %d array dimensions\n", array_dimensions.size());
+    _debugprintf("parsed %d array dimensions\n", array_dimensions.size());
 
     // parse pointers at the end
     int pointer_depth = 0;
-    printf("Trying to parse pointers\n");
+    _debugprintf("Trying to parse pointers\n");
     while (tokenizer.peek_next().type == TOKEN_MUL) {
         tokenizer.read_next();
         pointer_depth += 1;
     }
 
     // parse a function type
-    printf("try to find function parameters\n");
+    _debugprintf("try to find function parameters\n");
     std::vector<Crank_Declaration> call_parameters;
     bool is_function = false;
     bool is_variadic = false;
     if (tokenizer.peek_next().type == TOKEN_LEFT_PARENTHESIS) {
-        printf("This is a function param list!\n");
+        _debugprintf("This is a function param list!\n");
         tokenizer.read_next();
         is_function = true;
         while (tokenizer.peek_next().type != TOKEN_RIGHT_PARENTHESIS) {
-            printf("trying to read param.\n");
+            _debugprintf("trying to read param.\n");
             if (tokenizer.peek_next().type == TOKEN_DOT) {
                 // possible variadic?
                 assert(tokenizer.read_next().type == TOKEN_DOT && "This should've been a variadic argument?");
@@ -554,11 +541,11 @@ Error<Crank_Type_Declaration> read_type_declaration(Tokenizer_State& tokenizer) 
                 }
             }
         }
-        printf("finished param list!\n");
+        _debugprintf("finished param list!\n");
         assert(tokenizer.read_next().type == TOKEN_RIGHT_PARENTHESIS);
     }
 
-    if (is_function) printf("Function decl found with %d parameters\n", call_parameters.size());
+    if (is_function) _debugprintf("Function decl found with %d parameters\n", call_parameters.size());
     Crank_Type_Declaration result;
 
     result.name             = name.string;
@@ -842,7 +829,7 @@ Crank_Expression* parse_property_accessor(Tokenizer_State& tokenizer) {
 Crank_Expression* parse_unary(Tokenizer_State& tokenizer) {
     auto peek_next = tokenizer.peek_next();
     if (peek_next.type == TOKEN_NOT || peek_next.type == TOKEN_SUB || peek_next.type == TOKEN_BITNOT || peek_next.type == TOKEN_BITAND) {
-        printf("Unary found!\n");
+        _debugprintf("Unary found!\n");
         auto next = tokenizer.read_next(); 
         int operation = token_to_operation(next);
 
@@ -1058,14 +1045,14 @@ Crank_Statement* parse_declaration_statement(Tokenizer_State& tokenizer);
 
 Crank_Statement* parse_declaration_statement(Tokenizer_State& tokenizer) {
     Error<Crank_Declaration> parse_variable_decl(Tokenizer_State& tokenizer);
-    printf("parsing inline decl\n");
+    _debugprintf("parsing inline decl\n");
     auto inline_decl = parse_variable_decl(tokenizer);
     if (!inline_decl.good) {
-        printf("not a decl! fail!\n");
+        _debugprintf("not a decl! fail!\n");
         return nullptr;
     }
 
-    printf("Making new declaration\n");
+    _debugprintf("Making new declaration\n");
     // creating heap copy of decl cause I should've thought of that
     // sooner.
     Crank_Declaration* decl = new Crank_Declaration;
@@ -1173,27 +1160,27 @@ Crank_Statement* parse_if_statement(Tokenizer_State& tokenizer) {
 
 Crank_Statement* parse_any_statement(Tokenizer_State& tokenizer) {
     /* exhaust all statement types to parse. */
-    printf("trying to parse if\n");
+    _debugprintf("trying to parse if\n");
     auto if_statement = parse_if_statement(tokenizer);
     if (if_statement) return if_statement;
 
-    printf("trying to parse while\n");
+    _debugprintf("trying to parse while\n");
     auto while_statement = parse_while_statement(tokenizer);
     if (while_statement) return while_statement;
 
-    printf("trying to parse block\n");
+    _debugprintf("trying to parse block\n");
     auto block_statement = parse_block_statement(tokenizer);
     if (block_statement) return block_statement;
 
     // NOTE: semicolon requiring statements
-    printf("trying to parse return\n");
+    _debugprintf("trying to parse return\n");
     auto return_statement = parse_return_statement(tokenizer);
     if (return_statement) {
         assert(tokenizer.read_next().type == TOKEN_SEMICOLON && "Statement requiring semicolon");
         return return_statement;
     }
 
-    printf("trying to parse declaration\n");
+    _debugprintf("trying to parse declaration\n");
     {
         int current_read_cursor = tokenizer.read_cursor;
         // hack, I need to uneat or "vomit" out a token
@@ -1206,7 +1193,7 @@ Crank_Statement* parse_any_statement(Tokenizer_State& tokenizer) {
         }
     }
 
-    printf("trying to parse expression\n");
+    _debugprintf("trying to parse expression\n");
     auto expression_statement = parse_expression_statement(tokenizer);
     if (expression_statement) {
         assert(tokenizer.read_next().type == TOKEN_SEMICOLON && "Statement requiring semicolon");
@@ -1244,14 +1231,14 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
     switch(first.type) {
         case TOKEN_CHARACTER: {
             tokenizer.read_next();
-            printf("Found char literal.\n");
+            _debugprintf("Found char literal.\n");
             value.type = lookup_type("char");
             value.int_value = (int)first.valuechar;
             return Error<Crank_Value>::okay(value);
         } break;
         case TOKEN_STRING: {
             tokenizer.read_next();
-            printf("Found string literal.\n");
+            _debugprintf("Found string literal.\n");
             value.type = lookup_type("strlit");
             // NOTE?
             value.string_value = first.string;
@@ -1259,14 +1246,14 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
         } break;
         case TOKEN_NUMBERINT: {
             tokenizer.read_next();
-            printf("Found number.\n");
+            _debugprintf("Found number.\n");
             value.type = lookup_type("int");
             value.int_value = first.value32;
             return Error<Crank_Value>::okay(value);
         } break;
         case TOKEN_NUMBERFLOAT: {
             tokenizer.read_next();
-            printf("Found float number.\n");
+            _debugprintf("Found float number.\n");
             value.type = lookup_type("float");
             value.float_value = first.value32f;
             return Error<Crank_Value>::okay(value);
@@ -1282,11 +1269,11 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
               function literal (which requires registering else where)
             */
 
-            printf("Found symbol.\n");
+            _debugprintf("Found symbol.\n");
             auto next = tokenizer.peek_next();
             value.value_type = VALUE_TYPE_SYMBOL;
             if (next.type == TOKEN_COLON) {
-                printf("Presuming this to be an object literal\n");
+                _debugprintf("Presuming this to be an object literal\n");
                 // object literal
                 /*
                  * NOTE: just keep it like this to be simple, so it's kinda like Go.
@@ -1300,7 +1287,7 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
                 assert(tokenizer.read_next().type == TOKEN_LEFT_CURLY_BRACE && "A struct literal looks like structname: {initializer}");
                 value.value_type = VALUE_TYPE_LITERAL;
                 value.type = lookup_type(first.string);
-                printf("Trying to lookup struct : \"%.*s\"\n", unwrap_string_view(first.string));
+                _debugprintf("Trying to lookup struct : \"%.*s\"\n", unwrap_string_view(first.string));
                 assert(value.type && "This struct type should exist!");
                 // NOTE: I should check if the type is indeed a struct
                 // TODO causes issues with non-parenthesized things
@@ -1313,11 +1300,11 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
 
                     auto first = tokenizer.peek_next();
                     if (first.type == TOKEN_SYMBOL) {
-                        printf("Named literal\n");
+                        _debugprintf("Named literal\n");
                         literal_object->type = OBJECT_LITERAL_DECL_NAMED;
 
                         while (tokenizer.peek_next().type != TOKEN_RIGHT_CURLY_BRACE) {
-                            printf("Reading a field\n");
+                            _debugprintf("Reading a field\n");
                             auto field_symbol_token = tokenizer.read_next();
                             assert(field_symbol_token.type == TOKEN_SYMBOL && "This should be the name of the field!");
                             auto colon_separator_token = tokenizer.read_next();
@@ -1340,11 +1327,11 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
                             }
                         }
                     } else {
-                        printf("Ordered literal\n");
+                        _debugprintf("Ordered literal\n");
                         literal_object->type = OBJECT_LITERAL_DECL_ORDERED;
 
                         while (tokenizer.peek_next().type != TOKEN_RIGHT_CURLY_BRACE) {
-                            printf("Reading a field\n");
+                            _debugprintf("Reading a field\n");
                             auto field_value = parse_expression(tokenizer);
                             assert(field_value && "Error while reading record declaration value!");
                             literal_object->expressions.push_back(field_value);
@@ -1370,7 +1357,10 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
 
                 /* handle reserved keywords */
                 if (value.symbol_name == "null") {
-                    assert(0 && "reserved keyword 'null'! Aborting!");
+                    // NOTE: this will not output right now
+                    value.value_type = VALUE_TYPE_LITERAL;
+                    value.type = lookup_type("void", {}, {}, 0, 0, 1);
+                    value.int_value = 0;
                 } else if (value.symbol_name == "true") {
                     value.value_type = VALUE_TYPE_LITERAL;
                     value.type = lookup_type("bool");
@@ -1381,7 +1371,7 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
                     value.int_value = 0;
                 } else {
                     if (next.type == TOKEN_LEFT_PARENTHESIS) {
-                        printf("Possible function call\n");
+                        _debugprintf("Possible function call\n");
                         tokenizer.read_next(); 
 
                         value.is_function_call = true;
@@ -1392,7 +1382,6 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
 
                             if (tokenizer.peek_next().type == TOKEN_COMMA) {
                                 tokenizer.read_next();
-                                printf("HI I ATE A COMMA TODAY!\n");
                             } else if (tokenizer.peek_next().type == TOKEN_RIGHT_PARENTHESIS) {
                                 break;
                             } else {
@@ -1491,11 +1480,11 @@ Error<Crank_Declaration> read_inline_declaration(Tokenizer_State& tokenizer) {
     tokenizer.read_next();
 
     auto extern_token = tokenizer.peek_next();
-    printf("Trying to parse for extern(%.*s)\n", unwrap_string_view(extern_token.string));
+    _debugprintf("Trying to parse for extern(%.*s)\n", unwrap_string_view(extern_token.string));
     // if I were to output native code, I'd assume standard C linkage for now.
     if (extern_token.type == TOKEN_SYMBOL && extern_token.string == "extern") {
         tokenizer.read_next();
-        printf("Object is an extern declaration!\n");
+        _debugprintf("Object is an extern declaration!\n");
         /*
          * This is technically more important for when we need to check if all functions are defined.
          */
@@ -1506,14 +1495,14 @@ Error<Crank_Declaration> read_inline_declaration(Tokenizer_State& tokenizer) {
             auto extern_linkage_name = tokenizer.read_next();
             assert(extern_linkage_name.type == TOKEN_STRING);
             result.extern_definition.linkage_name = extern_linkage_name.stringvalue;
-            printf("This object is linked as \"%s\"", result.extern_definition.linkage_name.c_str());
+            _debugprintf("This object is linked as \"%s\"", result.extern_definition.linkage_name.c_str());
             assert(tokenizer.read_next().type == TOKEN_RIGHT_PARENTHESIS && "Extern name param needs to be closed with a parenthesis!");
         }
     }
 
     auto type_entry = read_type_declaration(tokenizer);
     assert(type_entry.good && "Bad type entry?");
-    printf("Checking decl type... (%s)\n", type_entry.value.name.c_str());
+    _debugprintf("Checking decl type... (%s)\n", type_entry.value.name.c_str());
     /* NOTE: replace this stuff. Should be a bit faster... */
     auto type = lookup_type(
         type_entry.value.name,
@@ -1531,10 +1520,10 @@ Error<Crank_Declaration> read_inline_declaration(Tokenizer_State& tokenizer) {
 
     if (type_entry.value.is_function) {
         assert(type->is_function);
-        printf("This decl is a function!\n");
+        _debugprintf("This decl is a function!\n");
         auto function_statement = parse_any_statement(tokenizer);
         if (function_statement) {
-            printf("function declaration!\n");
+            _debugprintf("function declaration!\n");
             result.has_value = true;
             // result.value.body = function_statement;
             result.expression = new Crank_Expression;
@@ -1543,7 +1532,7 @@ Error<Crank_Declaration> read_inline_declaration(Tokenizer_State& tokenizer) {
         }
     } else {
         assert(!result.is_externally_defined && "Variables cannot be externally defined in this language!");
-        printf("This decl is a variable!\n");
+        _debugprintf("This decl is a variable!\n");
         if (tokenizer.peek_next().type == TOKEN_EQUAL) {
             /*
              * NOTE: for supporting function objects
@@ -1568,7 +1557,7 @@ Error<Crank_Declaration> read_inline_declaration(Tokenizer_State& tokenizer) {
 
 #if 0 // disabled for now TODO: array typecheck against known size
             if (result.value.array_elements.size() > 0) {
-                printf("Array type checking\n");
+                _debugprintf("Array type checking\n");
                 result.value.type = type;
 
                 std::vector<int> array_dimensions = result.value.type->array_dimensions;
@@ -1592,7 +1581,7 @@ Error<Crank_Declaration> read_inline_declaration(Tokenizer_State& tokenizer) {
 
 bool read_record_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
     assert(type->type == TYPE_RECORD && "wtf");
-    printf("Trying to read decl\n");
+    _debugprintf("Trying to read decl\n");
     while (tokenizer.peek_next().type == TOKEN_SYMBOL) { // I don't think I need to check this anymore b/c read_inline_declaration returns error but okay
         // NOTE: I should allow inner anonymous structs and unions.
         // not variants though. Those are a special case?
@@ -1614,7 +1603,7 @@ bool read_record_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
 
 bool read_union_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
     assert(type->type == TYPE_UNION && "?");
-    printf("Trying to read decl\n");
+    _debugprintf("Trying to read decl\n");
     while (tokenizer.peek_next().type == TOKEN_SYMBOL) { // I don't think I need to check this anymore b/c read_inline_declaration returns error but okay
         // NOTE: I should allow inner anonymous structs and unions.
         // not variants though. Those are a special case?
@@ -1657,7 +1646,7 @@ Error<Crank_Declaration> parse_typedef(Tokenizer_State& tokenizer) {
             // TODO: I would resolve this later but I don't have the resources to do so right now!
             return Error<Crank_Declaration>::fail("Cannot resolve type! Not known yet?");
         }
-        printf("read typedef rename\n");
+        _debugprintf("read typedef rename\n");
         // this requires a semicolon.
         assert(tokenizer.read_next().type == TOKEN_SEMICOLON);
         return Error<Crank_Declaration>::okay(typedecl);
@@ -1674,7 +1663,7 @@ Error<Crank_Declaration> parse_typedef(Tokenizer_State& tokenizer) {
             typedecl.object_type = register_new_type(name.string, TYPE_RECORD);
 
             if (read_record_definition(typedecl.object_type, tokenizer)) {
-                printf("Read new record definition\n");
+                _debugprintf("Read new record definition\n");
                 return Error<Crank_Declaration>::okay(typedecl);
             } else {
                 return Error<Crank_Declaration>::fail("Failed to read record definition");
@@ -1688,7 +1677,7 @@ Error<Crank_Declaration> parse_typedef(Tokenizer_State& tokenizer) {
             typedecl.object_type = register_new_type(name.string, TYPE_UNION);
 
             if (read_union_definition(typedecl.object_type, tokenizer)) {
-                printf("Read new union definition\n");
+                _debugprintf("Read new union definition\n");
                 return Error<Crank_Declaration>::okay(typedecl);
             } else {
                 return Error<Crank_Declaration>::fail("Failed to read record definition");
@@ -1773,9 +1762,9 @@ Error<Crank_Module> load_module_from_source(std::string module_name, std::string
                     if (!new_decl.good) {
                         printf("%s\n", new_decl.message);
                     } else  {
-                        printf("new decl added\n");
+                        _debugprintf("new decl added\n");
                         if (new_decl.value.object_type->is_function && new_decl.value.name == "main") {
-                            printf("Found main function!\n");
+                            _debugprintf("Found main function!\n");
                             module.has_main = true;
                         }
                         module.decls.push_back(new_decl);
@@ -1790,7 +1779,7 @@ Error<Crank_Module> load_module_from_source(std::string module_name, std::string
             } break;
             default: {
                 /* TODO better error message? */
-                printf("What did I read?: %.*s\n", unwrap_string_view(Token_Type_string_table[first_token.type]));
+                _debugprintf("What did I read?: %.*s\n", unwrap_string_view(Token_Type_string_table[first_token.type]));
                 return Error<Crank_Module>::fail(
                     "Not a valid declaration start!"
                 );
