@@ -46,7 +46,7 @@ int  crank_mainpoint_entry(int  argc, std::string  arguments[])
 Vector  obj = {
 1,2,3,}
 ;
-;printf("%d", obj.x);return 0;
+;printf("The object obj is of type %s which has %d members", obj._TypeInfo.typename, obj._TypeInfo.members.count);return 0;
 }
 
 /**

@@ -12,6 +12,7 @@ main: int(argc: int, arguments: strlit[]) {
       // NOTE: this will error right now and that's okay for me
       // I can fix this later.
       // obj2: Vector = Vector { z: 2, y: 4, x: 123 };
-      print("%d", obj.x);
+      // bit too slow for this one :)
+//      print("The object obj is of type %s which has %d members", obj._TypeInfo.typename, obj._TypeInfo.members.count);
       return 0;
 };

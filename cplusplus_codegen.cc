@@ -332,6 +332,40 @@ protected:
         }
     }
 
+    /*
+     * NOTE:
+     *
+     * Crank doesn't support certain features such as methods or generics, and that's
+     * not part of the point of the language.
+     *
+     * However, this means I have to "hijack" a few parts of the language to allow for
+     * "magic" to happen that the language does not technically otherwise support.
+     *
+     * Such as invisibly allowing a few builtin fields.
+     * This is really only used for RTTI or metaprogramming useful features.
+     *
+     * Might be used to invisibly support dynamic arrays, which are currently internally
+     * implemented by std::vectors.
+     */
+    void output_binary_expression(Crank_Module& current_module, FILE* output, Crank_Expression* expression) {
+        bool overrode_behavior = false;
+
+        // assume this is at root
+        // this is for "invisible fields"
+        if (expression->operation == OPERATOR_PROPERTY_ACCESS) {
+            // TODO: I'm hitting my 1 hour and a half quota.
+            // auto& first = expression->binary.first;
+            // check if the first is either a registered base type
+            // (we cannot check on derivative types unfortunately)
+            // I don't believe crank will parse them correctly
+            // auto& second = expression->binary.second;
+        }
+
+        if (!overrode_behavior) {
+            Crank_Codegen_Partial_CStyleLanguage::output_binary_expression(current_module, output, expression);
+        }
+    }
+
     // MAIN should have specific signature but whatever!
     void output_entry_point(Crank_Module& current_module, FILE* output) {
         /** for C++ **/
