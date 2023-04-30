@@ -1285,7 +1285,7 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
             printf("Found symbol.\n");
             auto next = tokenizer.peek_next();
             value.value_type = VALUE_TYPE_SYMBOL;
-            if (next.type == TOKEN_LEFT_CURLY_BRACE) {
+            if (next.type == TOKEN_COLON) {
                 printf("Presuming this to be an object literal\n");
                 // object literal
                 /*
@@ -1295,6 +1295,9 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
                  * This isn't like C++ with initializers. Only for objects.
                  */
                 tokenizer.read_next();
+                // I don't have the ternary operator in this language so it's okay
+                // to use that syntax
+                assert(tokenizer.read_next().type == TOKEN_LEFT_CURLY_BRACE && "A struct literal looks like structname: {initializer}");
                 value.value_type = VALUE_TYPE_LITERAL;
                 value.type = lookup_type(first.string);
                 printf("Trying to lookup struct : \"%.*s\"\n", unwrap_string_view(first.string));
@@ -1919,7 +1922,7 @@ int main(int argc, char** argv){
         std::string compile_string = "g++ ";
         compile_string += " -o " + output_name + " ";
         for (auto l : linkage_lib_names) {
-            compile_string += " -l" + l;
+            compile_string += " -l" + l + " ";
         }
         for (auto s : module_names) {
             compile_string += s + " ";
