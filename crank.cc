@@ -1810,6 +1810,9 @@ void register_default_types() {
     register_new_type("s64",   TYPE_INTEGER64);
     register_new_type("s32",   TYPE_INTEGER32);
     register_new_type("s16",   TYPE_INTEGER16);
+    register_new_type("i64",   TYPE_INTEGER64);
+    register_new_type("i32",   TYPE_INTEGER32);
+    register_new_type("i16",   TYPE_INTEGER16);
     register_new_type("s8",    TYPE_INTEGER8);
     register_new_type("u64",   TYPE_UNSIGNEDINTEGER64);
     register_new_type("u32",   TYPE_UNSIGNEDINTEGER32);

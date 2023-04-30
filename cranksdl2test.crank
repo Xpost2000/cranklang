@@ -4,3 +4,277 @@
 
 // NOTE: I stole the bindings from odin-sdl2
 // since the syntax is pretty comparable to Crank!
+
+// Crank is not going to be as powerful as Odin so I need to put these
+// in order as well. :/
+typedef Common_Event : struct {
+	type: u32,
+	timestamp: u32,
+}
+
+typedef Window_Event : struct {
+	type: u32,
+	timestamp: u32,
+	window_id: u32,
+	event: u8,
+	padding1: u8,
+	padding2: u8,
+	padding3: u8,
+	data1: i32,
+	data2: i32,
+}
+
+typedef Keysym : struct {
+	scancode: i32,
+	sym: i32,
+	mod: u16,
+	unused: u32,
+}
+
+typedef Keyboard_Event : struct {
+	type: u32,
+	timestamp: u32,
+	window_id: u32,
+	state: u8,
+	repeat: u8,
+	padding2: u8,
+	padding3: u8,
+	keysym: Keysym,
+}
+
+typedef Text_Editing_Event : struct {
+	type: u32,
+	timestamp: u32,
+	window_id: u32,
+	text: u8[32],
+	start: i32,
+	length: i32,
+}
+
+
+typedef Text_Input_Event : struct {
+	type: u32,
+	timestamp: u32,
+	window_id: u32,
+	text: u8[32],
+}
+
+typedef Mouse_Motion_Event : struct {
+	type: u32,
+	timestamp: u32,
+	window_id: u32,
+	which: u32,
+	state: u32,
+	x: i32,
+	y: i32,
+	xrel: i32,
+	yrel: i32,
+}
+
+typedef Mouse_Button_Event : struct {
+	type: u32,
+	timestamp: u32,
+	window_id: u32,
+	which: u32,
+	button: u8,
+	state: u8,
+	clicks: u8,
+	padding1: u8,
+	x: i32,
+	y: i32,
+}
+
+typedef Mouse_Wheel_Event : struct {
+	type: u32,
+	timestamp: u32,
+	window_id: u32,
+	which: u32,
+	x: i32,
+	y: i32,
+	direction: u32,
+}
+
+typedef Joy_Axis_Event : struct {
+	type: u32,
+	timestamp: u32,
+	which: i32,
+	axis: u8,
+	padding1: u8,
+	padding2: u8,
+	padding3: u8,
+	value: i16,
+	padding4: u16,
+}
+
+typedef Joy_Ball_Event : struct {
+	type: u32,
+	timestamp: u32,
+	which: i32,
+	ball: u8,
+	padding1: u8,
+	padding2: u8,
+	padding3: u8,
+	xrel: i16,
+	yrel: i16,
+}
+
+typedef Joy_Hat_Event : struct {
+	type: u32,
+	timestamp: u32,
+	which: i32,
+	hat: u8,
+	value: u8,
+	padding1: u8,
+	padding2: u8,
+}
+
+typedef Joy_Button_Event : struct {
+	type: u32,
+	timestamp: u32,
+	which: i32,
+	button: u8,
+	state: u8,
+	padding1: u8,
+	padding2: u8,
+}
+
+typedef Joy_Device_Event : struct {
+	type: u32,
+	timestamp: u32,
+	which: i32,
+}
+
+typedef Controller_Axis_Event : struct {
+	type: u32,
+	timestamp: u32,
+	which: i32,
+	axis: u8,
+	padding1: u8,
+	padding2: u8,
+	padding3: u8,
+	value: i16,
+	padding4: u16,
+}
+
+typedef Controller_Button_Event : struct {
+	type: u32,
+	timestamp: u32,
+	which: i32,
+	button: u8,
+	state: u8,
+	padding1: u8,
+	padding2: u8,
+}
+
+typedef Controller_Device_Event : struct {
+	type: u32,
+	timestamp: u32,
+	which: i32,
+}
+
+typedef Audio_Device_Event : struct {
+	type: u32,
+	timestamp: u32,
+	which: u32,
+	iscapture: u8,
+	padding1: u8,
+	padding2: u8,
+	padding3: u8,
+}
+
+typedef Touch_Finger_Event : struct {
+	type: u32,
+	timestamp: u32,
+	touch_id: i64,
+	finger_id: i64,
+	x: f32,
+	y: f32,
+	dx: f32,
+	dy: f32,
+	pressure: f32,
+}
+
+typedef Multi_Gesture_Event : struct {
+	type: u32,
+	timestamp: u32,
+	touch_id: i64,
+	d_theta: f32,
+	d_dist: f32,
+	x: f32,
+	y: f32,
+	num_fingers: u16,
+	padding: u16,
+}
+
+typedef Dollar_Gesture_Event : struct {
+	type: u32,
+	timestamp: u32,
+	touch_id: i64,
+	gesture_id: i64,
+	num_fingers: u32,
+	error: f32,
+	x: f32,
+	y: f32,
+}
+
+typedef Drop_Event : struct {
+	type: u32,
+	timestamp: u32,
+	file: char*,
+	window_id: u32,
+}
+
+typedef Quit_Event : struct {
+	type: u32,
+	timestamp: u32,
+}
+
+typedef OS_Event : struct {
+	type: u32,
+	timestamp: u32,
+}
+
+typedef User_Event : struct {
+	type: u32,
+	timestamp: u32,
+	window_id: u32,
+	code: i32,
+	data1: void*,
+	data2: void*,
+}
+
+typedef Sys_Wm_Event : struct {
+	type: u32,
+	timestamp: u32,
+	msg: void*,
+}
+
+typedef Event : union {
+	type: u32,
+	common: Common_Event,
+	window: Window_Event,
+	key: Keyboard_Event,
+	edit: Text_Editing_Event,
+	text: Text_Input_Event,
+	motion: Mouse_Motion_Event,
+	button: Mouse_Button_Event,
+	wheel: Mouse_Wheel_Event,
+	jaxis: Joy_Axis_Event,
+	jball: Joy_Ball_Event,
+	jhat: Joy_Hat_Event,
+	jbutton: Joy_Button_Event,
+	jdevice: Joy_Device_Event,
+	caxis: Controller_Axis_Event,
+	cbutton: Controller_Button_Event,
+	cdevice: Controller_Device_Event,
+	adevice: Audio_Device_Event,
+	quit: Quit_Event,
+	user: User_Event,
+	syswm: Sys_Wm_Event,
+	tfinger: Touch_Finger_Event,
+	mgesture: Multi_Gesture_Event,
+	dgesture: Dollar_Gesture_Event,
+	drop: Drop_Event,
+
+	padding: u8[56],
+}
