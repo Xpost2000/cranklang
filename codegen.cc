@@ -98,6 +98,8 @@ protected:
             if (value->is_function_call) {
                 // lookup it's definition.
                 auto decl = crank_module_find_function_decl(current_module, (char*)value->symbol_name.c_str());
+                printf("Function \"%s\" does not have a declaration anywhere?\n", value->symbol_name.c_str();
+                assert(decl && "No function declaration!");
                 if (decl->is_externally_defined && decl->extern_definition.linkage_name != "") {
                     fprintf(output, "%s", decl->extern_definition.linkage_name.c_str());
                 } else {
