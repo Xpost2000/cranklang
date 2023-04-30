@@ -5,11 +5,13 @@ typedef Vector : struct {
         z : int = 1;
 }
 
+print: extern("printf") int(fmt: char*, ...);
+
 main: int(argc: int, arguments: strlit[]) {
       obj: Vector = Vector { 1, 2, 3 };
       // NOTE: this will error right now and that's okay for me
       // I can fix this later.
       // obj2: Vector = Vector { z: 2, y: 4, x: 123 };
-      printf("%d", obj.x);
+      print("%d", obj.x);
       return 0;
 };

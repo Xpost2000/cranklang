@@ -224,6 +224,7 @@ struct Crank_Type {
 
     int pointer_depth = 0;
     bool is_function = false;
+    bool is_variadic = false;
     std::vector<Crank_Declaration> call_parameters;
 
     /*
@@ -276,6 +277,7 @@ Crank_Type* register_new_type(
     std::vector<int> array_dimensions={},
     std::vector<Crank_Declaration> call_parameters={},
     bool is_function = false,
+    bool is_variadic = false,
     int pointer_depth = 0
 ) {
     global_type_table.push_back(new Crank_Type);
@@ -285,6 +287,7 @@ Crank_Type* register_new_type(
     result->array_dimensions = array_dimensions;
     result->call_parameters  = call_parameters;
     result->is_function = is_function;
+    result->is_variadic = is_variadic;
     result->pointer_depth = pointer_depth;
     return result;
 }
@@ -330,6 +333,7 @@ Crank_Type* lookup_type(
     std::vector<int> array_dimensions={},
     std::vector<Crank_Declaration> call_parameters={},
     bool is_function = false,
+    bool is_variadic = false,
     int pointer_depth = 0
 ) {
     printf("Checking for %.*s, (array dimens: %d), (call params: %d), (isfunc: %d), (ptrdepth: %d)\n",
@@ -355,6 +359,7 @@ Crank_Type* lookup_type(
 
             if (is_function == type->is_function) {
                 if (type->call_parameters.size() == call_parameters.size()) {
+                    if (type->is_variadic != is_variadic)
                     for (int i = 0; i < type->call_parameters.size() && result; ++i) {
                         auto& type_param_a = type->call_parameters[i];
                         auto& type_param_b = call_parameters[i];
@@ -390,7 +395,7 @@ Crank_Type* lookup_type(
 
         if (result == nullptr) {
             // register the derivative type.
-            result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters, is_function, pointer_depth);
+            result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters, is_function, is_variadic, pointer_depth);
         }
     }
 
@@ -444,13 +449,7 @@ struct Crank_Type_Declaration { // NOTE: for semantic analysis. Not doing type s
     std::vector<Crank_Declaration> call_parameters = {};
     int pointer_depth = 0;
     bool is_function = false;
-
-    bool is_derivative() {
-        return ((array_dimensions.size() != 0) ||
-                (call_parameters.size() != 0) ||
-                (pointer_depth != 0) ||
-                (is_function)); 
-    }
+    bool is_variadic = false;
 };
 
 // -1 is bad
@@ -512,21 +511,32 @@ Error<Crank_Type_Declaration> read_type_declaration(Tokenizer_State& tokenizer) 
     printf("try to find function parameters\n");
     std::vector<Crank_Declaration> call_parameters;
     bool is_function = false;
+    bool is_variadic = false;
     if (tokenizer.peek_next().type == TOKEN_LEFT_PARENTHESIS) {
         printf("This is a function param list!\n");
         tokenizer.read_next();
         is_function = true;
         while (tokenizer.peek_next().type != TOKEN_RIGHT_PARENTHESIS) {
             printf("trying to read param.\n");
-            auto decl = parse_variable_decl(tokenizer);
+            if (tokenizer.peek_next().type == TOKEN_DOT) {
+                // possible variadic?
+                assert(tokenizer.read_next().type == TOKEN_DOT && "This should've been a variadic argument?");
+                assert(tokenizer.read_next().type == TOKEN_DOT && "This should've been a variadic argument?");
+                assert(tokenizer.read_next().type == TOKEN_DOT && "This should've been a variadic argument?");
+                // variadic arguments will follow the same ordering as C, where they can be any type I suppose
+                assert(tokenizer.peek_next().type == TOKEN_RIGHT_PARENTHESIS && "A variadic argument is the end of a parameter list!");
+                is_variadic = true;
+            } else {
+                auto decl = parse_variable_decl(tokenizer);
 
-            if (decl.good) {
-                call_parameters.push_back(decl.value);
-                if (tokenizer.peek_next().type == TOKEN_RIGHT_PARENTHESIS) {
-                    continue;
-                } else {
-                    assert(tokenizer.peek_next().type == TOKEN_COMMA && "Comma separated params list!");
-                    tokenizer.read_next();
+                if (decl.good) {
+                    call_parameters.push_back(decl.value);
+                    if (tokenizer.peek_next().type == TOKEN_RIGHT_PARENTHESIS) {
+                        continue;
+                    } else {
+                        assert(tokenizer.peek_next().type == TOKEN_COMMA && "Comma separated params list!");
+                        tokenizer.read_next();
+                    }
                 }
             }
         }
@@ -547,6 +557,7 @@ Error<Crank_Type_Declaration> read_type_declaration(Tokenizer_State& tokenizer) 
 
     result.name             = name.string;
     result.is_function      = is_function;
+    result.is_variadic      = is_variadic;
     result.array_dimensions = array_dimensions;
     result.call_parameters  = call_parameters;
     result.pointer_depth    = pointer_depth;
@@ -1501,6 +1512,7 @@ Error<Crank_Declaration> read_inline_declaration(Tokenizer_State& tokenizer) {
         type_entry.value.array_dimensions,
         type_entry.value.call_parameters,
         type_entry.value.is_function,
+        type_entry.value.is_variadic,
         type_entry.value.pointer_depth
     );
     assert(type && "Type not found! Cannot resolve!");
@@ -1525,6 +1537,14 @@ Error<Crank_Declaration> read_inline_declaration(Tokenizer_State& tokenizer) {
         assert(!result.is_externally_defined && "Variables cannot be externally defined in this language!");
         printf("This decl is a variable!\n");
         if (tokenizer.peek_next().type == TOKEN_EQUAL) {
+            /*
+             * NOTE: for supporting function objects
+             * I can't really have them be "expressions" not in the normal sense, because it really
+             * doesn't make sense?
+             *
+             * and is a LOT of special casing to produce a function object in the expression parser imo...
+             * at least in the way I'm doing it
+             */
             tokenizer.read_next();
             auto value = parse_expression(tokenizer);
             assert(value);
