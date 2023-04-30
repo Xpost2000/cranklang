@@ -359,7 +359,10 @@ Crank_Type* lookup_type(
 
             if (is_function == type->is_function) {
                 if (type->call_parameters.size() == call_parameters.size()) {
-                    if (type->is_variadic != is_variadic)
+                    if (type->is_variadic != is_variadic) {
+                        result = nullptr;
+                    }
+
                     for (int i = 0; i < type->call_parameters.size() && result; ++i) {
                         auto& type_param_a = type->call_parameters[i];
                         auto& type_param_b = call_parameters[i];
@@ -578,6 +581,7 @@ enum Crank_Expression_Type {
 enum Crank_Expression_Operator {
     OPERATOR_NOT, // unary
     OPERATOR_NEGATE,
+    OPERATOR_ADDRESSOF,
     OPERATOR_PROPERTY_ACCESS, // NOTE: not unary but!
 
     // binary...
@@ -617,6 +621,7 @@ enum Crank_Expression_Operator {
 const char* Crank_Expression_Operator_string_table[] = {
     "!",
     "-",
+    "&",
     "property-access",
 
     "+",
@@ -833,7 +838,7 @@ Crank_Expression* parse_property_accessor(Tokenizer_State& tokenizer) {
 
 Crank_Expression* parse_unary(Tokenizer_State& tokenizer) {
     auto peek_next = tokenizer.peek_next();
-    if (peek_next.type == TOKEN_NOT || peek_next.type == TOKEN_SUB || peek_next.type == TOKEN_BITNOT) {
+    if (peek_next.type == TOKEN_NOT || peek_next.type == TOKEN_SUB || peek_next.type == TOKEN_BITNOT || peek_next.type == TOKEN_BITAND) {
         printf("Unary found!\n");
         auto next = tokenizer.read_next(); 
         int operation = token_to_operation(next);
@@ -841,6 +846,8 @@ Crank_Expression* parse_unary(Tokenizer_State& tokenizer) {
         // to course-correct.
         if (operation == OPERATOR_SUB) {
             operation = OPERATOR_NEGATE;
+        } else if (operation == OPERATOR_BITAND) {
+            operation = OPERATOR_ADDRESSOF;
         }
 
         assert(operation != -1 && "something went wrong here.");
