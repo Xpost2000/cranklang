@@ -28,6 +28,18 @@ void parse_statements() {
         Tokenizer_State tokenizer(test_parse);
         auto t = parse_any_statement(tokenizer);
         assert(t && "This should at least pass parsing at minimum.");
+        _debug_print_statement(t);
+    }
+    {
+        char* test_parse =
+            R"(
+-test + 45;
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(t && "This should at least pass parsing at minimum.");
+        _debug_print_statement(t);
     }
     {
         char* test_parse =
