@@ -27,7 +27,7 @@ void parse_statements() {
         printf("Parsing: %s\n", test_parse);
         Tokenizer_State tokenizer(test_parse);
         auto t = parse_any_statement(tokenizer);
-        assert(!t && "This is an empty statement");
+        assert(t && "This should at least pass parsing at minimum.");
     }
     {
         char* test_parse =
@@ -355,10 +355,10 @@ void typecheck_matching() {
     }
     {
         printf("Pointer matching\n");
-        assert(crank_type_match(lookup_type("int", {-1, -1, -1}, {}, false, 1), lookup_type("int", {-1, -1, -1}, {}, false, 1)) && "Same pointer types. should be okay");
-        assert(!crank_type_match(lookup_type("int", {-1, -1, -1}, {}, false, 1), lookup_type("int", {-1, -1, -1}, {}, false, 2)) && "Different pointer types. Should not match.");
-        assert(!crank_type_match(lookup_type("int", {}, {}, false, 1), lookup_type("float", {}, {}, false, 1)) && "Different pointer types. Should not match.");
-        assert(crank_type_match(lookup_type("int", {}, {}, false, 1), lookup_type("int", {}, {}, false, 1)) && "Same pointer types. should be okay");
+        assert(crank_type_match(lookup_type("int", {-1, -1, -1}, {}, false, false, 1), lookup_type("int", {-1, -1, -1}, {}, false, false, 1)) && "Same pointer types. should be okay");
+        assert(!crank_type_match(lookup_type("int", {-1, -1, -1}, {}, false, false, 1), lookup_type("int", {-1, -1, -1}, {}, false, false, 2)) && "Different pointer types. Should not match.");
+        assert(!crank_type_match(lookup_type("int", {}, {}, false, false, 1), lookup_type("float", {}, {}, false, false, 1)) && "Different pointer types. Should not match.");
+        assert(crank_type_match(lookup_type("int", {}, {}, false, false, 1), lookup_type("int", {}, {}, false, false, 1)) && "Same pointer types. should be okay");
     }
 }
 
