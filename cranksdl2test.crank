@@ -278,3 +278,38 @@ typedef Event : union {
 
 	padding: u8[56],
 }
+
+// Unfortunately Crank needs other numeric literals in order to be sanely useful
+// so I kind of have to caveman numbers together since I don't have enums yet...
+
+
+// bare minimum to test if I can link to SDL2 theoretically
+SDL_Init : extern i32(flags: u32);
+SDL_Quit : extern void();
+SDL_CreateWindow : extern void*(title: char*, x: i32, y: i32, w: i32, h: i32, flags: u32);
+SDL_PollEvent : extern i32(event: Event*);
+printf: extern int(format: char*, ...);
+
+main: int(argc: int, argv: strlit[]) {
+      SDL_Init(32); // SDL_INIT_VIDEO
+      quit: bool = false;
+
+      // SDL_WINDOW_POSCENTERED
+
+      window: void* = SDL_CreateWindow("This is a window", 805240832, 805240832, 1024, 768, 0);
+
+      while quit == false {
+            event: Event;
+
+            while SDL_PollEvent(&event) {
+                  // SDL Quit
+                  if event.type == 256 {
+                     printf("Bye!\n");
+                     // quit = true;
+                  }
+            }
+      }
+
+      SDL_Quit();
+      return 0;
+};

@@ -513,6 +513,14 @@ Error<Crank_Type_Declaration> read_type_declaration(Tokenizer_State& tokenizer) 
     }
     printf("parsed %d array dimensions\n", array_dimensions.size());
 
+    // parse pointers at the end
+    int pointer_depth = 0;
+    printf("Trying to parse pointers\n");
+    while (tokenizer.peek_next().type == TOKEN_MUL) {
+        tokenizer.read_next();
+        pointer_depth += 1;
+    }
+
     // parse a function type
     printf("try to find function parameters\n");
     std::vector<Crank_Declaration> call_parameters;
@@ -548,14 +556,6 @@ Error<Crank_Type_Declaration> read_type_declaration(Tokenizer_State& tokenizer) 
         }
         printf("finished param list!\n");
         assert(tokenizer.read_next().type == TOKEN_RIGHT_PARENTHESIS);
-    }
-
-    // parse pointers at the end
-    int pointer_depth = 0;
-    printf("Trying to parse pointers\n");
-    while (tokenizer.peek_next().type == TOKEN_MUL) {
-        tokenizer.read_next();
-        pointer_depth += 1;
     }
 
     if (is_function) printf("Function decl found with %d parameters\n", call_parameters.size());
@@ -1093,17 +1093,15 @@ Crank_Statement* parse_expression_statement(Tokenizer_State& tokenizer) {
 
 Crank_Statement* parse_return_statement(Tokenizer_State& tokenizer) {
     auto return_symbol = tokenizer.peek_next();
-    if (return_symbol.type == TOKEN_SYMBOL) {
-        if (return_symbol.string == "return") { // good
-            tokenizer.read_next();
+    if (return_symbol.type == TOKEN_SYMBOL && return_symbol.string == "return") {
+        tokenizer.read_next();
 
-            auto expression = parse_expression(tokenizer);
+        auto expression = parse_expression(tokenizer);
             
-            Crank_Statement* return_statement = new Crank_Statement;
-            return_statement->type = STATEMENT_RETURN;
-            return_statement->return_statement.result = expression;
-            return return_statement;
-        }
+        Crank_Statement* return_statement = new Crank_Statement;
+        return_statement->type = STATEMENT_RETURN;
+        return_statement->return_statement.result = expression;
+        return return_statement;
     }
 
     return nullptr;
@@ -1111,18 +1109,16 @@ Crank_Statement* parse_return_statement(Tokenizer_State& tokenizer) {
 
 Crank_Statement* parse_while_statement(Tokenizer_State& tokenizer) {
     auto while_symbol = tokenizer.peek_next();
-    if (while_symbol.type == TOKEN_SYMBOL) {
-        if (while_symbol.string == "while") { // good
-            tokenizer.read_next();
+    if (while_symbol.type == TOKEN_SYMBOL && while_symbol.string == "while") {
+        tokenizer.read_next();
 
-            auto condition = parse_expression(tokenizer);
+        auto condition = parse_expression(tokenizer);
             
-            Crank_Statement* while_statement = new Crank_Statement;
-            while_statement->type = STATEMENT_WHILE;
-            while_statement->while_statement.condition = condition;
-            while_statement->while_statement.action = parse_any_statement(tokenizer);
-            return while_statement;
-        }
+        Crank_Statement* while_statement = new Crank_Statement;
+        while_statement->type = STATEMENT_WHILE;
+        while_statement->while_statement.condition = condition;
+        while_statement->while_statement.action = parse_any_statement(tokenizer);
+        return while_statement;
     }
 
     return nullptr;
@@ -1154,24 +1150,22 @@ Crank_Statement* parse_switch_statement(Tokenizer_State& tokenizer) {
 
 Crank_Statement* parse_if_statement(Tokenizer_State& tokenizer) {
     auto if_symbol = tokenizer.peek_next();
-    if (if_symbol.type == TOKEN_SYMBOL) {
-        if (if_symbol.string == "if") { // good
-            tokenizer.read_next();
+    if (if_symbol.type == TOKEN_SYMBOL && if_symbol.string == "if") {
+        tokenizer.read_next();
 
-            auto condition = parse_expression(tokenizer);
+        auto condition = parse_expression(tokenizer);
             
-            Crank_Statement* if_statement = new Crank_Statement;
-            if_statement->type = STATEMENT_IF;
-            if_statement->if_statement.condition = condition;
-            if_statement->if_statement.true_branch = parse_any_statement(tokenizer);
+        Crank_Statement* if_statement = new Crank_Statement;
+        if_statement->type = STATEMENT_IF;
+        if_statement->if_statement.condition = condition;
+        if_statement->if_statement.true_branch = parse_any_statement(tokenizer);
 
-            auto else_symbol = tokenizer.peek_next();
-            if (else_symbol.type == TOKEN_SYMBOL && else_symbol.string == "else") {
-                tokenizer.read_next();
-                if_statement->if_statement.false_branch = parse_any_statement(tokenizer);
-            }
-            return if_statement;
+        auto else_symbol = tokenizer.peek_next();
+        if (else_symbol.type == TOKEN_SYMBOL && else_symbol.string == "else") {
+            tokenizer.read_next();
+            if_statement->if_statement.false_branch = parse_any_statement(tokenizer);
         }
+        return if_statement;
     }
 
     return nullptr;
@@ -1303,6 +1297,7 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
                 tokenizer.read_next();
                 value.value_type = VALUE_TYPE_LITERAL;
                 value.type = lookup_type(first.string);
+                printf("Trying to lookup struct : \"%.*s\"\n", unwrap_string_view(first.string));
                 assert(value.type && "This struct type should exist!");
                 // NOTE: I should check if the type is indeed a struct
                 // TODO causes issues with non-parenthesized things
