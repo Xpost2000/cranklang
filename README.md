@@ -1,5 +1,8 @@
 # CrankLang
 
+**NOTE: Crank is now featureful enough to have a simple FFI spec, and other than typedefs from the standard library**
+**the language only requires the existance of a C compiler. I still rely on std::vector for dynamic arrays but now the language is less "magic"**
+
 **NOTE: most of this is actually just a "TODO list" right now, although at the moment a subset of
 the language features compile.**
 
@@ -36,11 +39,6 @@ worth it I think is to do it.)
 The base implementation of the transpiler is in C++. It is not implemented in the most efficient
 way. Rather it was implemented in a way that I believe to be simple to read, and otherwise not too difficult
 to modify.
-
-## Interpreter Notes
-
-As of now the interpreter is just based on evaluating the syntax tree that the
-compiler produces.
 
 ## Transpiler Notes
 
