@@ -6,6 +6,11 @@ typedef Vector : struct {
         test: int[50];
 }
 
+typedef TestUnion: union {
+        x : int;
+        y : int;
+        z : int;
+}
 
 // a unique type to Crank
 // it's a modern Enum

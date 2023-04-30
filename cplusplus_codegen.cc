@@ -136,8 +136,9 @@ protected:
                 if (decl->has_value) {
                     fprintf(output, " = ");
                     output_expression(current_module, output, decl->expression);
-                } else {
-                    fprintf(output, " = {}");
+                // } else {
+                // I **do** want zero initialization, but this needs to be special cased
+                //     fprintf(output, " = {}");
                 }
             }
         } else {
@@ -149,23 +150,26 @@ protected:
                     fprintf(output, " %s", decl->name.c_str());
                 } break;
                 case TYPE_RECORD: { // struct
-                    fprintf(output, "struct %s { // test name\n", decl->name.c_str());
+                    fprintf(output, "struct %s { // struct name\n", decl->name.c_str());
                     for (auto& member : decl->object_type->members) {
                         output_declaration(current_module, output, &member);
                     }
                     fprintf(output, "};", decl->name.c_str());
                 } break;
 
-                default: {
-                    assert(!"unsupported codegen");
+                case TYPE_UNION: { // union
+                    fprintf(output, "union %s { // union name\n", decl->name.c_str());
+                    for (auto& member : decl->object_type->members) {
+                        output_declaration(current_module, output, &member);
+                    }
+                    fprintf(output, "};", decl->name.c_str());
                 } break;
-                // case TYPE_UNION: { // union
-                    
-                // } break;
                 // case TYPE_ENUMERATION: { // enum
                     
                 // } break;
-                    
+                default: {
+                    assert(!"unsupported codegen");
+                } break;
             }
         }
         fprintf(output, ";");

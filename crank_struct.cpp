@@ -32,11 +32,16 @@ typedef int8_t  s8;
 
 typedef u32 uint;
 typedef int  RenamedInt;
-struct Vector { // test name
+struct Vector { // struct name
 int  x = 4;
 int  y = 2;
 int  z = 1;
-int  test[50] = {};
+int  test[50];
+};;
+union TestUnion { // union name
+int  x;
+int  y;
+int  z;
 };;
 extern "C" {
 int  printf(char * fmt);}; // end extern "C" 
