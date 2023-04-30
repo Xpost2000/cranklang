@@ -306,7 +306,7 @@ Event  event;
 {
 if (event.type==256) 
 {
-printf("Bye!\n");}
+printf("Bye!\n");quit=true;}
 
 
 }
