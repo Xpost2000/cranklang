@@ -124,6 +124,7 @@ protected:
             if (decl->object_type->is_function) {
                 fprintf(output, "(");
                 for (int i = 0; i < decl->object_type->call_parameters.size(); ++i) {
+                    // I swear something is wrong here.
                     output_function_param_item(current_module, output, &decl->object_type->call_parameters[i]);
                     if (i+1 >= decl->object_type->call_parameters.size()) {}
                     else {

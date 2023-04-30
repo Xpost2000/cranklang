@@ -55,6 +55,9 @@
   much time so I've kinda stopped doing it at some point just to get sutff done
   faster.
 
+  TODO/NOTE: LOL I forgot I had comments as actual tokens (mostly so I could include a documentation generator),
+  need to eat all comments before terminators
+
   NOTE: Crank is not going to support methods. It's not part of the MO, although it's not additionally
   complicated...
   NOTE: Crank is not supporting multiple declarations either. It probably could with slight changes to the parser
@@ -1598,6 +1601,7 @@ bool read_record_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
 
         auto new_member_decl = read_inline_declaration(tokenizer).value;
         assert(tokenizer.peek_next().type == TOKEN_SEMICOLON || tokenizer.peek_next().type == TOKEN_COMMA);
+        tokenizer.read_next();
         // assert(new_member_decl.good && "Bad decl");
         // TODO: check for duplicates!
         if (new_member_decl.has_value) {
@@ -1619,6 +1623,7 @@ bool read_union_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
 
         auto new_member_decl = read_inline_declaration(tokenizer).value;
         assert(tokenizer.peek_next().type == TOKEN_SEMICOLON || tokenizer.peek_next().type == TOKEN_COMMA);
+        tokenizer.read_next();
         assert(!new_member_decl.has_value && "Unions with default initialization are undefined behavior!");
         type->members.push_back(new_member_decl);
     }

@@ -4,14 +4,8 @@ typedef Vector : struct {
         y : int = 2;
         z : int = 1;
         test: int[50];
-        // should generate as std::vectors
-        // test2: int[];
 }
 
-typedef TestUnion: union {
-        // same as a struct basically in generation
-        // other than being tagged differently
-}
 
 // a unique type to Crank
 // it's a modern Enum
@@ -19,6 +13,10 @@ typedef TestUnion: union {
 // }
 
 print: extern("printf") int(fmt: char*, ...);
+
+vadd: Vector(a: Vector, b: Vector) {
+      return Vector { 1, 2, 3 };
+};
 
 main: int(argc: int, arguments: strlit[]) {
       obj: Vector = Vector { 1, 2, 3 };

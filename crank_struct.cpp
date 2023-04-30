@@ -37,12 +37,18 @@ int  x = 4;
 int  y = 2;
 int  z = 1;
 int  test[50] = {};
-int  test2[] = {};
 };;
 extern "C" {
 int  printf(char * fmt);}; // end extern "C" 
 
+Vector  vadd(Vector  a, Vector  b);
 int  crank_mainpoint_entry(int  argc, std::string  arguments[]);
+Vector  vadd(Vector  a, Vector  b)
+{
+return {
+1,2,3,}
+;
+}
 int  crank_mainpoint_entry(int  argc, std::string  arguments[])
 {
 Vector  obj = {
