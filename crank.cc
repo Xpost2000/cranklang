@@ -90,6 +90,9 @@ enum Crank_Types {
     /* Not implemented yet! */
     TYPE_UNION,
     TYPE_ENUMERATION,
+
+    // built in tagged union or algebraic data type
+    TYPE_VARIANT,
     /* Not impleemented yet! */
 
     TYPE_VOID, // NOT IMPLEMENTED
@@ -1563,6 +1566,9 @@ bool read_record_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
     assert(type->type == TYPE_RECORD && "wtf");
     printf("Trying to read decl\n");
     while (tokenizer.peek_next().type == TOKEN_SYMBOL) { // I don't think I need to check this anymore b/c read_inline_declaration returns error but okay
+        // NOTE: I should allow inner anonymous structs and unions.
+        // not variants though. Those are a special case?
+
         auto new_member_decl = read_inline_declaration(tokenizer).value;
         assert(tokenizer.read_next().type == TOKEN_SEMICOLON);
         // assert(new_member_decl.good && "Bad decl");
@@ -1570,14 +1576,7 @@ bool read_record_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
         if (new_member_decl.has_value) {
             printf("Sorry! No default value yet!\n");
         }
-        // or delegates I guess
-        // NOTE: function pointer members not working
-        Crank_Declaration member;
-        member.name             = new_member_decl.name;
-        member.array_dimensions = new_member_decl.array_dimensions;
-        member.object_type      = new_member_decl.object_type;
-
-        type->members.push_back(member);
+        type->members.push_back(new_member_decl);
     }
     printf("Finished reading decl! (%d members?)\n", type->members.size());
     assert(tokenizer.read_next().type == TOKEN_RIGHT_CURLY_BRACE);
@@ -1596,7 +1595,6 @@ Error<Crank_Declaration> parse_typedef(Tokenizer_State& tokenizer) {
 
         Crank_Declaration typedecl;
         typedecl.decl_type = DECL_TYPE;
-        typedecl.object_type = lookup_type(type_entry.value.name);
         typedecl.name = name.string;
         typedecl.array_dimensions = type_entry.value.array_dimensions;
 
@@ -1604,6 +1602,7 @@ Error<Crank_Declaration> parse_typedef(Tokenizer_State& tokenizer) {
         // there's no need to list the array dimensions.
         auto new_type = register_new_type(typedecl.name, TYPE_RENAME);
         new_type->rename_of = lookup_type(type_entry.value.name, typedecl.array_dimensions);
+        typedecl.object_type = new_type;
         assert(new_type->rename_of && "Error! Typedefed type does not exist!");
 
         if (!typedecl.object_type) {

@@ -141,15 +141,30 @@ protected:
             }
         } else {
             printf("outputting typedef\n");
-            if (decl->object_type->type == TYPE_RENAME) {
-                fprintf(output, "typedef %s ", decl->name.c_str());
-                output_type(current_module, output, decl->object_type->rename_of);
-            } else {
-                fprintf(output, "struct %s { // test name\n", decl->name.c_str());
-                for (auto& member : decl->object_type->members) {
-                    output_declaration(current_module, output, &member);
-                }
-                fprintf(output, "};", decl->name.c_str());
+            switch (decl->object_type->type) {
+                case TYPE_RENAME: { // typedef of the normal kind
+                    fprintf(output, "typedef ");
+                    output_type(current_module, output, decl->object_type->rename_of);
+                    fprintf(output, " %s", decl->name.c_str());
+                } break;
+                case TYPE_RECORD: { // struct
+                    fprintf(output, "struct %s { // test name\n", decl->name.c_str());
+                    for (auto& member : decl->object_type->members) {
+                        output_declaration(current_module, output, &member);
+                    }
+                    fprintf(output, "};", decl->name.c_str());
+                } break;
+
+                default: {
+                    assert(!"unsupported codegen");
+                } break;
+                // case TYPE_UNION: { // union
+                    
+                // } break;
+                // case TYPE_ENUMERATION: { // enum
+                    
+                // } break;
+                    
             }
         }
         fprintf(output, ";");
