@@ -285,10 +285,45 @@ protected:
         bool overrode_behavior = false;
         if (value->value_type == VALUE_TYPE_LITERAL) {
             auto typeof_object = value->type;
+
             if (typeof_object->type == TYPE_STRINGLITERAL) {
                 // C++ is too permissive lol. So I need to figure this one out.
+                // TODO: write a crank string runtime type
                 // fprintf(output, "std::string(\"%s\")", value->string_value.c_str());
                 // overrode_behavior = true;
+            } else if (typeof_object->type == TYPE_RECORD) {
+                /* record literals
+                   NOTE/TODO: I don't really trust C++ to produce these correctly so I should
+                   technically always make a function that generates an object...
+                   Especially since C++11 doesn't promise designated initializers to work correctly.
+                   but this leads to a special case in the initializer. Also it means I cannot use
+
+                   for the sake of simplicity. I'll output it the same way that it's read-in for now.
+                   I will think of making "constructor" objects later
+                */
+                auto& literal_value = value->literal_value;
+                assert(literal_value && "This should not be possible? Null literal value");
+                assert(literal_value->named_values.size() <= typeof_object->members.size() &&
+                       literal_value->expressions.size() <= typeof_object->members.size() &&
+                       "initializer is too large!");
+                fprintf(output, "{\n");
+
+                // would rather just put this through the constructor but okay
+                if (literal_value->type == OBJECT_LITERAL_DECL_ORDERED) {
+                    for (auto& expression : literal_value->expressions) {
+                        output_expression(current_module, output, expression);
+                        fprintf(output, ",");
+                    }
+                } else if (literal_value->type == OBJECT_LITERAL_DECL_NAMED) {
+                    for (auto& named_value : literal_value->named_values) {
+                        fprintf(output, "%s: ", named_value.name.c_str());
+                        output_expression(current_module, output, named_value.expression);
+                        fprintf(output, ",");
+                    }
+                }
+                // for (typeof_object->)
+                fprintf(output, "}\n");
+                overrode_behavior = true;
             }
         }
 
