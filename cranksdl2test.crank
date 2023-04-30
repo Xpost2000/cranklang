@@ -305,7 +305,7 @@ main: int(argc: int, argv: strlit[]) {
                   // SDL Quit
                   if event.type == 256 {
                      printf("Bye!\n");
-                     // quit = true;
+                     quit = true;
                   }
             }
       }
