@@ -1921,11 +1921,11 @@ int main(int argc, char** argv){
         // I should try to detect the tool chain that someone might have.
         std::string compile_string = "g++ ";
         compile_string += " -o " + output_name + " ";
-        for (auto l : linkage_lib_names) {
-            compile_string += " -l" + l + " ";
-        }
         for (auto s : module_names) {
             compile_string += s + " ";
+        }
+        for (auto l : linkage_lib_names) {
+            compile_string += " -l" + l + " ";
         }
 
         printf("calling c compiler: %s\n", compile_string.c_str());
