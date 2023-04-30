@@ -1,0 +1,6 @@
+// an SDL2 game where a guy walks around.
+// Since I don't have enums or many structs...
+// This is going to sort of hurt
+
+// NOTE: I stole the bindings from odin-sdl2
+// since the syntax is pretty comparable to Crank!

@@ -3,7 +3,20 @@ typedef Vector : struct {
         x : int = 4;
         y : int = 2;
         z : int = 1;
+        test: int[50];
+        // should generate as std::vectors
+        // test2: int[];
 }
+
+typedef TestUnion: union {
+        // same as a struct basically in generation
+        // other than being tagged differently
+}
+
+// a unique type to Crank
+// it's a modern Enum
+// typedef TestVariant: variant {
+// }
 
 print: extern("printf") int(fmt: char*, ...);
 

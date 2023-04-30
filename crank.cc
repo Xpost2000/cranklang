@@ -1597,12 +1597,29 @@ bool read_record_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
         // not variants though. Those are a special case?
 
         auto new_member_decl = read_inline_declaration(tokenizer).value;
-        assert(tokenizer.read_next().type == TOKEN_SEMICOLON);
+        assert(tokenizer.peek_next().type == TOKEN_SEMICOLON || tokenizer.peek_next().type == TOKEN_COMMA);
         // assert(new_member_decl.good && "Bad decl");
         // TODO: check for duplicates!
         if (new_member_decl.has_value) {
             printf("Sorry! No default value yet!\n");
         }
+        type->members.push_back(new_member_decl);
+    }
+    printf("Finished reading decl! (%d members?)\n", type->members.size());
+    assert(tokenizer.read_next().type == TOKEN_RIGHT_CURLY_BRACE);
+    return true;
+}
+
+bool read_union_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
+    assert(type->type == TYPE_UNION && "?");
+    printf("Trying to read decl\n");
+    while (tokenizer.peek_next().type == TOKEN_SYMBOL) { // I don't think I need to check this anymore b/c read_inline_declaration returns error but okay
+        // NOTE: I should allow inner anonymous structs and unions.
+        // not variants though. Those are a special case?
+
+        auto new_member_decl = read_inline_declaration(tokenizer).value;
+        assert(tokenizer.peek_next().type == TOKEN_SEMICOLON || tokenizer.peek_next().type == TOKEN_COMMA);
+        assert(!new_member_decl.has_value && "Unions with default initialization are undefined behavior!");
         type->members.push_back(new_member_decl);
     }
     printf("Finished reading decl! (%d members?)\n", type->members.size());
@@ -1662,7 +1679,19 @@ Error<Crank_Declaration> parse_typedef(Tokenizer_State& tokenizer) {
             // typedecl.array_dimensions;
             typedecl.name = name.string;
         } else if (determiner.string == "union") {
-            assert(!"Not union implemented yet!");
+            Crank_Declaration typedecl;
+            typedecl.decl_type = DECL_TYPE;
+            typedecl.name = name.string;
+            typedecl.object_type = register_new_type(name.string, TYPE_UNION);
+
+            if (read_union_definition(typedecl.object_type, tokenizer)) {
+                printf("Read new union definition\n");
+                return Error<Crank_Declaration>::okay(typedecl);
+            } else {
+                return Error<Crank_Declaration>::fail("Failed to read record definition");
+            }
+            // typedecl.array_dimensions;
+            typedecl.name = name.string;
         } else if (determiner.string == "enum") {
             assert(!"Not enum implemented yet!");
         } else {
