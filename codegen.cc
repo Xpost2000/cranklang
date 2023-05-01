@@ -150,7 +150,7 @@ protected:
                         if (value->int_value) {
                             fprintf(output, "true");
                         } else {
-                            fprintf(output, "true");
+                            fprintf(output, "false");
                         }
                     } break;
                     case TYPE_UNSIGNEDINTEGER8:
