@@ -1,0 +1,77 @@
+/*
+        Enums will generally behave like enums
+        in other languages.
+
+        Enums MUST have a type though. Only integral
+        types are valid.
+
+        Enums can also be indexed.
+        Enums have some properties.
+
+        Enums are also scoped.
+*/
+
+/*
+typedef LightSignal: enum i32 {
+        // imply starting at 0
+        RED,
+        BLUE,
+        GREEN,
+};
+*/
+
+// NOTE:
+// these are generated as normal enums with a prefix.
+// Numbers_NegativeFive
+
+/*
+typedef Numbers: enum i8 {
+        NegativeFive = -5,
+        NegativeFour,
+        NegativeThree,
+        NegativeTwo,
+        NegativeOne,
+        Zero,
+        One,
+        Two,
+        Three,
+        Four,
+        Five,
+};
+*/
+
+printf: extern int(fmt: char*, ...);
+
+main: int(argc: int, argv: strlit[]) {
+      // to remove ambiguity.
+      // NOTE: I don't have a lot of array behaviors right now
+      // so I might have to think of something...
+
+      // printf("%d, %d, %d\n", Numbers.NegativeFive, Numbers.One, Numbers.Two);
+
+
+      // The for loop is a little more "powerful"
+      // in this language, solely because I don't have multiple declaration
+      // nor the comma operator.
+
+      // So this modification to the traditional for loop syntax allows me to do interesting
+      // things
+
+      /*
+        The grammar for a for loop is really more like
+
+        for
+                INITIALIZATION STATEMENTS (0 or more)
+
+                CONDITION EXPRESSION
+
+                POST LOOP STATEMENTS [compensates for the lack of comma operator]
+      */
+
+      printf("Here's an interesting for loop");
+      for i: int = 3; j: int = 13; i < j; ++i; --j {
+          printf("i: %d, j: %d\n", i, j);
+      }
+
+      return 0;
+};

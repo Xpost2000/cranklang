@@ -290,6 +290,8 @@ SDL_CreateWindow : extern void*(title: char*, x: i32, y: i32, w: i32, h: i32, fl
 SDL_PollEvent : extern i32(event: Event*);
 printf: extern int(format: char*, ...);
 
+MessageBoxA: extern int(window: void*, message: char*, caption: char*, type: uint);
+
 main: int(argc: int, argv: strlit[]) {
       SDL_Init(32); // SDL_INIT_VIDEO
       quit: bool = false;
@@ -305,6 +307,7 @@ main: int(argc: int, argv: strlit[]) {
                   // SDL Quit
                   if event.type == 256 {
                      printf("Bye!\n");
+                     MessageBoxA(0,  "Bye! Closing Window", "MessageBox", 0);
                      quit = true;
                   }
             }
