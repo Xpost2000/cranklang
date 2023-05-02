@@ -239,7 +239,11 @@ Token Tokenizer_State::read_next() {
                         end_of_comment = read_cursor;
                     }
                     comment.string     = source.substr(start_of_comment, end_of_comment-start_of_comment);
-                    return comment;
+
+                    continue;
+                    // This leads to weird parsing problems right now, so
+                    // I don't advice it for myself right now.
+                    // return comment;
                 } else {
                     Token result      = {};
                     result.type       = TOKEN_DIV;

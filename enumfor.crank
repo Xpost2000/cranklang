@@ -11,14 +11,12 @@
         Enums are also scoped.
 */
 
-/*
 typedef LightSignal: enum i32 {
         // imply starting at 0
         RED,
         BLUE,
         GREEN,
 };
-*/
 
 // NOTE:
 // these are generated as normal enums with a prefix.
