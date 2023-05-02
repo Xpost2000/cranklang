@@ -931,7 +931,6 @@ bool is_constant_expression(Crank_Expression* expression) {
 }
 
 bool is_value_expression_numeric(Crank_Expression* expression) {
-    unimplemented("is_value_expression_numeric");
     auto& value = expression->value;
     auto object_type = follow_typedef_chain(value.type);
 
@@ -2012,9 +2011,11 @@ bool read_enum_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
             // unless I figure out how to determine if expressions are constant!
 
             // found value
-            auto new_value = tokenizer.read_next();
-            assert(new_value.type == TOKEN_NUMBERINT && "Enum init should be a constant integer!");
-            current_value = start_counting_from = new_value.value32;
+            auto new_value = parse_expression(tokenizer);
+            assert(is_expression_numeric(new_value) && "enum value should be a numeric expression!");
+            assert(is_constant_expression(new_value) && "enum value should be a constant expression!");
+            // assert(new_value.type == TOKEN_NUMBERINT && "Enum init should be a constant integer!");
+            current_value = start_counting_from = 99;
             start_counting_from++;
         } else {
             // nothing

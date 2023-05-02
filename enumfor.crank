@@ -57,8 +57,9 @@ This is not possible right now because we need to figure out if expressions
 can be constant folded.
 
 NOTE: for now only actual constants should be folded. Function calls are not allowed!
+*/
 
-typedef Numbers: enum i8 {
+typedef Numbers: enum s8 {
         NegativeFive = -5,
         NegativeFour,
         NegativeThree,
@@ -70,8 +71,8 @@ typedef Numbers: enum i8 {
         Three,
         Four,
         Five,
-};
-*/
+}
+
 typedef numbers2: enum s8 {
         A = 3,
         B,
