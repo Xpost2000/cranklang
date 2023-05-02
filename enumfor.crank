@@ -61,16 +61,18 @@ main: int(argc: int, argv: strlit[]) {
         The grammar for a for loop is really more like
 
         for
-                INITIALIZATION STATEMENTS (0 or more)
+                INITIALIZATION STATEMENTS (0 or more declarations)
 
                 CONDITION EXPRESSION
 
-                POST LOOP STATEMENTS [compensates for the lack of comma operator]
+                POST LOOP STATEMENTS
+
+                parenthesis optional
       */
 
       printf("Here's an interesting for loop");
 
-      for i: int = 3; j: int = 13; i < j; ++i; --j {
+      for i: int = 3; j: int = 13; i < j; i += 1; j -= 1; {
           printf("i: %d, j: %d\n", i, j);
       }
 

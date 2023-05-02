@@ -1007,8 +1007,9 @@ struct Crank_Statement_If {
  */
 struct Crank_Statement_For {
     std::vector<Crank_Statement*> initialization_statements;
-    Crank_Expression* expression = nullptr;
+    Crank_Expression* condition = nullptr;
     std::vector<Crank_Statement*> postloop_statements;
+    Crank_Statement* body = nullptr;
 };
 
 struct Crank_Statement_While {
@@ -1110,6 +1111,68 @@ Crank_Statement* parse_return_statement(Tokenizer_State& tokenizer) {
     return nullptr;
 }
 
+Crank_Statement* parse_for_statement(Tokenizer_State& tokenizer) {
+    auto for_symbol = tokenizer.peek_next();
+
+    if (for_symbol.type == TOKEN_SYMBOL && for_symbol.string == "for") {
+        tokenizer.read_next();
+        // try to only read declarations;
+        Crank_Statement* for_statement = new Crank_Statement;
+        for_statement->type = STATEMENT_FOR;
+
+        auto& for_statement_data = for_statement->for_statement;
+
+        {
+            bool terminate = false;
+            bool first = true;
+            while (!terminate) {
+                _debugprintf("trying to parse declaration\n");
+                int current_read_cursor = tokenizer.read_cursor;
+                auto declaration_statement = parse_declaration_statement(tokenizer);
+                if (declaration_statement) {
+                    for_statement_data.initialization_statements.push_back(declaration_statement);
+                } else {
+                    tokenizer.read_cursor = current_read_cursor;
+                    terminate = true;
+                    if (!first) continue; // avoid semicolon check.
+                }
+                assert(tokenizer.read_next().type == TOKEN_SEMICOLON && "For loop requires a semicolon to terminate things!");
+                first = false;
+            }
+        }
+        for_statement_data.condition = parse_expression(tokenizer);
+        assert(tokenizer.read_next().type == TOKEN_SEMICOLON && "You need a semicolon after the condition!");
+        {
+            bool terminate = false;
+            bool first = true;
+            while (!terminate) {
+                int current_read_cursor = tokenizer.read_cursor;
+                auto any_statement = parse_expression_statement(tokenizer);
+                if (!any_statement) any_statement = parse_if_statement(tokenizer);
+
+                if (any_statement) { // if is allowed because this language has no ternary operators.
+                    for_statement_data.postloop_statements.push_back(any_statement);
+                } else {
+                    // NOTE: I unread the statement.
+                    tokenizer.read_cursor = current_read_cursor;
+                    terminate = true;
+                    if (!first) continue; // avoid semicolon check.
+                    assert(tokenizer.read_next().type == TOKEN_SEMICOLON && "You need a semicolon for empty post action list!");
+                }
+                first = false;
+            }
+        }
+
+        for_statement_data.body = parse_block_statement(tokenizer);
+        assert(for_statement_data.body && "A for loop MUST have a block body. You cannot have empty for loops!");
+
+        _debugprintf("For loop: %d initializations, %d post actions", for_statement_data.initialization_statements.size(), for_statement_data.postloop_statements.size());
+        _debugprintf("For loop: %p condition? %p body?\n", for_statement_data.condition, for_statement_data.body);
+    }
+
+    return nullptr;
+}
+
 Crank_Statement* parse_while_statement(Tokenizer_State& tokenizer) {
     auto while_symbol = tokenizer.peek_next();
     if (while_symbol.type == TOKEN_SYMBOL && while_symbol.string == "while") {
@@ -1137,12 +1200,14 @@ Crank_Statement* parse_if_statement(Tokenizer_State& tokenizer) {
         Crank_Statement* if_statement = new Crank_Statement;
         if_statement->type = STATEMENT_IF;
         if_statement->if_statement.condition = condition;
-        if_statement->if_statement.true_branch = parse_any_statement(tokenizer);
+        // if_statement->if_statement.true_branch = parse_any_statement(tokenizer);
+        if_statement->if_statement.true_branch = parse_block_statement(tokenizer);
 
         auto else_symbol = tokenizer.peek_next();
         if (else_symbol.type == TOKEN_SYMBOL && else_symbol.string == "else") {
             tokenizer.read_next();
-            if_statement->if_statement.false_branch = parse_any_statement(tokenizer);
+            // if_statement->if_statement.false_branch = parse_any_statement(tokenizer);
+            if_statement->if_statement.false_branch = parse_block_statement(tokenizer);
         }
         return if_statement;
     }
