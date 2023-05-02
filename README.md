@@ -1,5 +1,7 @@
 # CrankLang
 
+**NOTE: Crank now supports constant folding!**
+
 **NOTE: Crank is now featureful enough to have a simple FFI spec, and other than typedefs from the standard library**
 **the language only requires the existence of a C compiler. I still rely on std::vector for dynamic arrays but now the language is less "magic"**
 
