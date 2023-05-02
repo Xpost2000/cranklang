@@ -239,7 +239,6 @@ struct Crank_Type {
     std::vector<Crank_Declaration> members;
 };
 
-
 // TODO:
 // - Check array dimension matching
 // - Check function matching!
@@ -250,6 +249,35 @@ Crank_Type* follow_typedef_chain(Crank_Type* type) {
         cursor = cursor->rename_of;
     }
     return cursor;
+}
+
+bool is_type_numeric(Crank_Type* type) {
+    type = follow_typedef_chain(type);
+
+    switch (type->type) {
+        case TYPE_NUMERIC:
+        case TYPE_BOOLEAN:
+        case TYPE_INTEGER8:
+        case TYPE_INTEGER16:
+        case TYPE_INTEGER32:
+        case TYPE_INTEGER64:
+        case TYPE_UNSIGNEDINTEGER8:
+        case TYPE_UNSIGNEDINTEGER16:
+        case TYPE_UNSIGNEDINTEGER32:
+        case TYPE_UNSIGNEDINTEGER64:
+        case TYPE_FLOAT:
+        case TYPE_DOUBLE:
+            return true;
+        default: break;
+    }
+
+    return false;
+}
+
+// will return the "greater" of two types
+// implicit conversions.
+Crank_Type* numeric_type_promotion(Crank_Type* a, Crank_Type* b, Crank_Type* maximum_promoted_type) {
+    unimplemented("numeric_type_promotion");
 }
 
 // Crank type match is a strict type matching.
@@ -780,6 +808,72 @@ Crank_Expression* value_expression(Crank_Value value) {
     result->value = value;
     return result;
 }
+
+// Expression check helpers
+
+bool is_value_expression_constant(Crank_Expression* expression) {
+    unimplemented("is_value_expression_constant");
+}
+
+bool is_unary_expression_constant(Crank_Expression* expression) {
+    unimplemented("is_unary_expression_constant");
+}
+
+bool is_binary_expression_constant(Crank_Expression* expression) {
+    unimplemented("is_binary_expression_constant");
+}
+
+bool is_constant_expression(Crank_Expression* expression) {
+    if (!expression)
+        return true;
+
+    switch (expression->type) {
+        case EXPRESSION_VALUE: return is_value_expression_constant(expression);
+        case EXPRESSION_UNARY: return is_unary_expression_constant(expression);
+        case EXPRESSION_BINARY: return is_binary_expression_constant(expression);
+    }
+
+    return false;
+}
+
+bool is_value_expression_numeric(Crank_Expression* expression) {
+    unimplemented("is_value_expression_numeric");
+}
+
+bool is_unary_expression_numeric(Crank_Expression* expression) {
+    unimplemented("is_unary_expression_numeric");
+}
+
+bool is_binary_expression_numeric(Crank_Expression* expression) {
+    unimplemented("is_binary_expression_numeric");
+}
+
+bool is_expression_numeric(Crank_Expression* expression) {
+    if (!expression)
+        return true;
+    
+    switch (expression->type) {
+        case EXPRESSION_VALUE: return is_value_expression_numeric(expression);
+        case EXPRESSION_UNARY: return is_unary_expression_numeric(expression);
+        case EXPRESSION_BINARY: return is_binary_expression_numeric(expression);
+    }
+    return false;
+}
+
+// NOTE this will determine the type from the first
+// evaluated sub-expression
+// Also handles type promotion with a strict flag
+// NOTE: This allows type inference I suppose.
+Crank_Type* get_expression_type(Crank_Expression* expression, bool strict=false) {
+    unimplemented("get_expression_type");
+}
+
+// NOTE: will only work with numeric types;
+Crank_Expression* fold_constants() {
+    unimplemented("fold_constants");
+}
+
+// End of Expression check helpers
 
 Error<Crank_Declaration> read_inline_declaration(Tokenizer_State& tokenizer);
 
