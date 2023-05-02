@@ -827,8 +827,6 @@ bool is_expression_numeric(Crank_Expression* expression);
 bool is_value_expression_constant(Crank_Expression* expression) {
     auto& value = expression->value;
     if (value.value_type == VALUE_TYPE_LITERAL) {
-        auto object_type = follow_typedef_chain(value.type);
-
         // NOTE: function should take priority
         // and this should take priority?
         // need to really investigate how this will behave when testing.
@@ -845,7 +843,10 @@ bool is_value_expression_constant(Crank_Expression* expression) {
         }
 #endif
 
+        // NOTE: if there is a symbol name. this might not work.
+
         // check for function?
+        auto object_type = follow_typedef_chain(value.type);
 
         {
             if (is_type_numeric(object_type)) {
@@ -931,6 +932,16 @@ bool is_constant_expression(Crank_Expression* expression) {
 
 bool is_value_expression_numeric(Crank_Expression* expression) {
     unimplemented("is_value_expression_numeric");
+    auto& value = expression->value;
+    auto object_type = follow_typedef_chain(value.type);
+
+    // thankfully this is pretty simple...
+    // NOTE: if it's a function call... I need to check what type
+    // function calls are.
+
+    if (value.array_elements.size() > 0) return false;
+
+    return is_type_numeric(object_type);
 }
 
 bool is_unary_expression_numeric(Crank_Expression* expression) {
@@ -1713,6 +1724,14 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
                         tokenizer.read_next(); 
 
                         value.is_function_call = true;
+                        // NOTE: Ah I see. types are not looked up yet!
+                        // to allow out of order declaration
+                        // crank types have to patch themselves up!
+                        // IE: type is probably null here.
+                        // we need to look up declarations for a function definition
+                        // NOTE:
+                        // so add this to a list of "to resolve", and when I find a function
+                        // see if we can resolve the function.
                         while (tokenizer.peek_next().type != TOKEN_RIGHT_PARENTHESIS) {
                             auto new_value = parse_expression(tokenizer);
                             assert(new_value && "Bad function param passing");
