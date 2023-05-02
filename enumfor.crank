@@ -53,6 +53,11 @@ typedef TestFlagHex: enum u64 {
 // Numbers_NegativeFive
 
 /*
+This is not possible right now because we need to figure out if expressions
+can be constant folded.
+
+NOTE: for now only actual constants should be folded. Function calls are not allowed!
+
 typedef Numbers: enum i8 {
         NegativeFive = -5,
         NegativeFour,
@@ -67,6 +72,13 @@ typedef Numbers: enum i8 {
         Five,
 };
 */
+typedef numbers2: enum s8 {
+        A = 3,
+        B,
+        C,
+        D = 10,
+        E,
+}
 
 printf: extern int(fmt: char*, ...);
 

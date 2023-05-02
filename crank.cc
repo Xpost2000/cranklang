@@ -1759,6 +1759,7 @@ bool read_enum_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
             auto new_value = tokenizer.read_next();
             assert(new_value.type == TOKEN_NUMBERINT && "Enum init should be a constant integer!");
             current_value = start_counting_from = new_value.value32;
+            start_counting_from++;
         } else {
             // nothing
         }
