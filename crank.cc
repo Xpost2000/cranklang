@@ -42,8 +42,8 @@
   much time so I've kinda stopped doing it at some point just to get sutff done
   faster.
 
-  TODO/NOTE: LOL I forgot I had comments as actual tokens (mostly so I could include a documentation generator),
-  need to eat all comments before terminators
+  NOTE: when I add multiple modules, all Crank_Declarations are going to specify which module they
+  come from.
 
   NOTE: Crank is not going to support methods. It's not part of the MO, although it's not additionally
   complicated...
@@ -459,6 +459,28 @@ Crank_Declaration* crank_module_find_function_decl(Crank_Module& module, char* f
 
         return &decl;
     }
+
+    return nullptr;
+}
+
+// Looking up some base types
+/*
+ * Unions and records are similar in codegen other than memory storage.
+ * So you can search for them using the same procedure, since other than practical
+ * usage they work identically.
+ */
+Crank_Type* crank_type_system_find_record_or_union_decl(char* type_name) {
+    auto ptr = lookup_type(type_name);
+    if (ptr->type == TYPE_RECORD || ptr->type == TYPE_UNION)
+        return ptr;
+
+    return nullptr;
+} 
+
+Crank_Type* crank_type_system_find_enum_decl(char* type_name) {
+    auto ptr = lookup_type(type_name);
+    if (ptr->type == TYPE_ENUMERATION)
+        return ptr;
 
     return nullptr;
 }
