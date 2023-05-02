@@ -460,8 +460,9 @@ Token Tokenizer_State::read_next() {
                                 for (int i = 0; i < 16; ++i) hex_string[i] = '0';
 
                                 int length = 0;
-                                while (valid_hex_character(peek_character())) {
+                                while (is_good_for_identifier(peek_character())) {
                                     char c = next_character();
+                                    assert(valid_hex_character(c) && "Invalid characters for hexadecimal literal");
                                     hex_string[length++] = c;
                                 }
 
@@ -477,7 +478,7 @@ Token Tokenizer_State::read_next() {
                                 for (int i = 0; i < 64; ++i) binary_string[i] = '0';
 
                                 int length = 0;
-                                while (isdigit(peek_character())) {
+                                while (is_good_for_identifier(peek_character())) {
                                     char c = next_character();
                                     assert((c == '0' || c == '1') && "Invalid characters for binary literal");
                                     binary_string[length++] = c;
