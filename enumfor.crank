@@ -69,6 +69,7 @@ main: int(argc: int, argv: strlit[]) {
       */
 
       printf("Here's an interesting for loop");
+
       for i: int = 3; j: int = 13; i < j; ++i; --j {
           printf("i: %d, j: %d\n", i, j);
       }

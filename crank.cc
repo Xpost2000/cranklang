@@ -954,10 +954,10 @@ enum Crank_Statement_Type {
     STATEMENT_DECLARATION, // variable decl mostly
     STATEMENT_EXPRESSION, // the normal kind of statement
     STATEMENT_IF,
+    STATEMENT_FOR,
     STATEMENT_WHILE,
     STATEMENT_RETURN,
 
-    STATEMENT_SWITCH,
     STATEMENT_CONTINUE,
     STATEMENT_BREAK,
 
@@ -968,10 +968,12 @@ const char* Crank_Statement_Type_string_table[] = {
     [STATEMENT_DECLARATION] = "declaration",
     [STATEMENT_EXPRESSION]  = "expression",
     [STATEMENT_IF]          = "if-statement",
+    [STATEMENT_FOR]          = "for-statement",
     [STATEMENT_WHILE]       = "while-statement",
     [STATEMENT_RETURN]      = "return-statement",
 
-    [STATEMENT_SWITCH]      = "switch-statement",
+    // Continue and break should allow labels as well.
+    // when I add them of course.
     [STATEMENT_CONTINUE]      = "continue-statement",
     [STATEMENT_BREAK]      = "break-statement",
 };
@@ -995,21 +997,35 @@ struct Crank_Statement_If {
     Crank_Statement* false_branch;
 };
 
+/*
+  NOTE: due to the behavior of this for loop,
+  it is impossible to compile into a C for loop, and this
+  will **always** be a while loop.
+
+  (the initialization statements can make any variables of any type.
+  Which is not legal in a normal for loop)
+ */
+struct Crank_Statement_For {
+    std::vector<Crank_Statement*> initialization_statements;
+    Crank_Expression* expression = nullptr;
+    std::vector<Crank_Statement*> postloop_statements;
+};
+
 struct Crank_Statement_While {
-    Crank_Expression* condition;
-    Crank_Statement* action;
+    Crank_Expression* condition = nullptr;
+    Crank_Statement* action = nullptr;
 };
 
 struct Crank_Statement_Return {
-    Crank_Expression* result;
+    Crank_Expression* result = nullptr;
 };
 
 struct Crank_Statement_Expression {
-    Crank_Expression* expression;
+    Crank_Expression* expression = nullptr;
 };
 
 struct Crank_Statement_Declaration {
-    Crank_Declaration* declaration;
+    Crank_Declaration* declaration = nullptr;
 };
 
 struct Crank_Statement_Block {
@@ -1027,19 +1043,19 @@ struct Crank_Statement {
     // Since std::vector is not trivially constructable
     Crank_Statement_If          if_statement;
     Crank_Statement_While       while_statement;
+    Crank_Statement_For         for_statement;
     Crank_Statement_Return      return_statement;
     Crank_Statement_Expression  expression_statement;
     Crank_Statement_Declaration declaration_statement;
-    Crank_Statement_Switch      switch_statement;
     Crank_Statement_Block       block_statement; // or a compound statement
 };
 
 Crank_Statement* parse_any_statement(Tokenizer_State& tokenizer);
 Crank_Statement* parse_block_statement(Tokenizer_State& tokenizer);
 Crank_Statement* parse_if_statement(Tokenizer_State& tokenizer);
+Crank_Statement* parse_for_statement(Tokenizer_State& tokenizer);
 Crank_Statement* parse_while_statement(Tokenizer_State& tokenizer);
 Crank_Statement* parse_return_statement(Tokenizer_State& tokenizer);
-Crank_Statement* parse_switch_statement(Tokenizer_State& tokenizer);
 Crank_Statement* parse_expression_statement(Tokenizer_State& tokenizer);
 Crank_Statement* parse_declaration_statement(Tokenizer_State& tokenizer);
 
@@ -1111,30 +1127,6 @@ Crank_Statement* parse_while_statement(Tokenizer_State& tokenizer) {
     return nullptr;
 }
 
-#if 0
-Crank_Statement* parse_switch_statement(Tokenizer_State& tokenizer) {
-    auto switch_symbol = tokenizer.peek_next();
-    if (switch_symbol.type == TOKEN_SYMBOL) {
-        if (switch_symbol.string == "switch") {
-            tokenizer.read_next();
-
-            auto condition = parse_expression(tokenizer);
-
-            Crank_Statement* switch_statement = new Crank_Statement;
-            switch_statement->type = STATEMENT_SWITCH;
-            switch_statement->switch_statement.condition = condition;
-
-            // NOTE: ... hmm turns out a switch statement
-            // can have many implications. Let me come back to this
-            // one.
-            // switch body
-
-            return switch_statement;
-        }
-    }
-}
-#endif
-
 Crank_Statement* parse_if_statement(Tokenizer_State& tokenizer) {
     auto if_symbol = tokenizer.peek_next();
     if (if_symbol.type == TOKEN_SYMBOL && if_symbol.string == "if") {
@@ -1163,6 +1155,10 @@ Crank_Statement* parse_any_statement(Tokenizer_State& tokenizer) {
     _debugprintf("trying to parse if\n");
     auto if_statement = parse_if_statement(tokenizer);
     if (if_statement) return if_statement;
+
+    _debugprintf("trying to parse for\n");
+    auto for_statement = parse_for_statement(tokenizer);
+    if (for_statement) return for_statement;
 
     _debugprintf("trying to parse while\n");
     auto while_statement = parse_while_statement(tokenizer);
