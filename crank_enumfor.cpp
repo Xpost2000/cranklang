@@ -39,7 +39,7 @@ typedef u32 uint;
 enum class LightSignal : i32 { // enum name
 RED = 0,BLUE = 1,GREEN = 2,};;
 enum class TestFlagBinary : u64 { // enum name
-FlagOne = 1,FlagTwo = 2,FlagThree = 3,FlagFour = 3,FlagFive = 3,FlagSix = 3,};;
+FlagOne = 1,FlagTwo = 1,FlagThree = 1,};;
 extern "C" {
 int  printf(char * fmt);}; // end extern "C" 
 
