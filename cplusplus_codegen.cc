@@ -164,9 +164,16 @@ protected:
                     }
                     fprintf(output, "};", decl->name.c_str());
                 } break;
-                // case TYPE_ENUMERATION: { // enum
-                    
-                // } break;
+                case TYPE_ENUMERATION: { // enum
+                    auto enum_internal_type = decl->object_type->enum_internal_type;
+                    enum_internal_type = follow_typedef_chain(enum_internal_type);
+
+                    fprintf(output, "enum class %s : %s { // enum name\n", decl->name.c_str(), enum_internal_type->name.c_str());
+                    for (auto& member : decl->object_type->enum_members) {
+                        fprintf(output, "%s = %d,", member.name.c_str(), member.value);
+                    }
+                    fprintf(output, "};", decl->name.c_str());
+                } break;
                 default: {
                     assert(!"unsupported codegen");
                 } break;
