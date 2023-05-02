@@ -257,17 +257,41 @@ bool is_type_numeric(Crank_Type* type) {
     switch (type->type) {
         case TYPE_NUMERIC:
         case TYPE_BOOLEAN:
-        case TYPE_INTEGER8:
-        case TYPE_INTEGER16:
-        case TYPE_INTEGER32:
-        case TYPE_INTEGER64:
-        case TYPE_UNSIGNEDINTEGER8:
-        case TYPE_UNSIGNEDINTEGER16:
-        case TYPE_UNSIGNEDINTEGER32:
-        case TYPE_UNSIGNEDINTEGER64:
-        case TYPE_FLOAT:
-        case TYPE_DOUBLE:
+        case TYPE_INTEGER8: case TYPE_INTEGER16:
+        case TYPE_INTEGER32: case TYPE_INTEGER64:
+        case TYPE_UNSIGNEDINTEGER8: case TYPE_UNSIGNEDINTEGER16:
+        case TYPE_UNSIGNEDINTEGER32: case TYPE_UNSIGNEDINTEGER64:
+        case TYPE_FLOAT: case TYPE_DOUBLE:
         case TYPE_ENUMERATION:
+            return true;
+        default: break;
+    }
+
+    return false;
+}
+bool is_type_integer(Crank_Type* type) {
+    type = follow_typedef_chain(type);
+
+    switch (type->type) {
+        case TYPE_BOOLEAN:
+        case TYPE_INTEGER8: case TYPE_INTEGER16:
+        case TYPE_INTEGER32: case TYPE_INTEGER64:
+        case TYPE_UNSIGNEDINTEGER8: case TYPE_UNSIGNEDINTEGER16:
+        case TYPE_UNSIGNEDINTEGER32: case TYPE_UNSIGNEDINTEGER64:
+        case TYPE_ENUMERATION:
+            return true;
+        default: break;
+    }
+
+    return false;
+}
+bool is_type_unsigned_integer(Crank_Type* type) {
+    type = follow_typedef_chain(type);
+
+    switch (type->type) {
+        case TYPE_BOOLEAN:
+        case TYPE_UNSIGNEDINTEGER8: case TYPE_UNSIGNEDINTEGER16:
+        case TYPE_UNSIGNEDINTEGER32: case TYPE_UNSIGNEDINTEGER64:
             return true;
         default: break;
     }
@@ -297,22 +321,6 @@ bool crank_type_match(Crank_Type* a, Crank_Type* b) {
     }
 
     return false;
-}
-
-bool crank_is_integer_type(Crank_Type* type) {
-    switch (type->type) {
-        case TYPE_INTEGER8:
-        case TYPE_INTEGER16:
-        case TYPE_INTEGER32:
-        case TYPE_INTEGER64:
-        case TYPE_UNSIGNEDINTEGER8:
-        case TYPE_UNSIGNEDINTEGER16:
-        case TYPE_UNSIGNEDINTEGER32:
-        case TYPE_UNSIGNEDINTEGER64:
-            return true;
-        default:
-            return false;
-    }
 }
 
 // globally registered types
@@ -1006,7 +1014,12 @@ Crank_Expression* fold_constant_numeric_expression(Crank_Expression* expression)
 
 Crank_Expression* fold_constant_numeric_unary_expression(Crank_Expression* expression) {
     auto& unary = expression->unary;
-    unimplemented("fold_constant_numeric_unary_expression not implemented yet!");
+    // unimplemented("fold_constant_numeric_unary_expression not implemented yet!");
+    Crank_Expression* result = new Crank_Expression;
+    result->type = EXPRESSION_VALUE;
+    result->value = expression->value;
+    if (is_type_integer(result->value))
+    return result;
 }
 Crank_Expression* fold_constant_numeric_binary_expression(Crank_Expression* expression) {
     auto& binary = expression->binary;
@@ -1632,6 +1645,9 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
         case TOKEN_NUMBERINT: {
             tokenizer.read_next();
             _debugprintf("Found number.\n");
+            // I mean... I should have more specifiers to make
+            // this more than just "int", although I store the full
+            // 64 bit range so I guess it's okay...
             value.type = lookup_type("int");
             value.int_value = first.value32;
             return Error<Crank_Value>::okay(value);
@@ -2045,6 +2061,7 @@ bool read_enum_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
             // because I have to lookup the enum and use the literal value.
             
             if (new_value->type == EXPRESSION_VALUE) {
+                // definitely need a helper to get stuff working
                 current_value = start_counting_from = new_value->value.int_value;
             } else {
                 assert(new_value->type == EXPRESSION_BINARY && "This should be a property access, but firstly that must be binary!"); 
@@ -2138,7 +2155,7 @@ Error<Crank_Declaration> parse_typedef(Tokenizer_State& tokenizer) {
             if (determiner.type != TOKEN_SYMBOL) return Error<Crank_Declaration>::fail("Need symbol descriptor to discriminate!");
 
             typedecl.object_type->enum_internal_type = lookup_type(enum_type.string);
-            assert(crank_is_integer_type(typedecl.object_type->enum_internal_type) && "Enums can only be tagged after integer types!");
+            assert(is_type_integer(typedecl.object_type->enum_internal_type) && "Enums can only be tagged after integer types!");
 
             assert(tokenizer.read_next().type == TOKEN_LEFT_CURLY_BRACE && "Invalid start to tagged enum item");
             if (read_enum_definition(typedecl.object_type, tokenizer)) {
