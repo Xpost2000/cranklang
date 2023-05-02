@@ -955,7 +955,25 @@ bool is_binary_expression_numeric(Crank_Expression* expression) {
     // This has to be special-cased for enums, because enums **are**
     // also numeric values.
     if (expression->operation == OPERATOR_PROPERTY_ACCESS) {
-        unimplemented("TODO: check if this is an enum!");
+        auto& first = expression->binary.first;
+        if (first->type == EXPRESSION_VALUE &&
+            first->value.value_type == VALUE_TYPE_SYMBOL) {
+            auto& symbol_name = first->value.symbol_name;
+            auto  enum_type    = crank_type_system_find_enum_decl((char*)symbol_name.c_str());
+
+            if (enum_type) {
+                auto& second = expression->binary.second;
+
+                assert(
+                    second->type == EXPRESSION_VALUE &&
+                    second->value.value_type == VALUE_TYPE_SYMBOL &&
+                    "enum value access error! Second param of property access should be the value!"
+                );
+
+                return true;
+            }
+        }
+
         return false;
     }
 
