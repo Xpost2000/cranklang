@@ -660,6 +660,7 @@ enum Crank_Expression_Operator {
     OPERATOR_NOT, // unary
     OPERATOR_NEGATE,
     OPERATOR_ADDRESSOF,
+    OPERATOR_DEREFERENCE,
     OPERATOR_PROPERTY_ACCESS, // NOTE: not unary but!
 
     // binary...
@@ -700,6 +701,7 @@ const char* Crank_Expression_Operator_string_table[] = {
     "!",
     "-",
     "&",
+    "pointer-dereference",
     "property-access",
 
     "+",
@@ -1147,7 +1149,11 @@ Crank_Expression* parse_property_accessor(Tokenizer_State& tokenizer) {
 
 Crank_Expression* parse_unary(Tokenizer_State& tokenizer) {
     auto peek_next = tokenizer.peek_next();
-    if (peek_next.type == TOKEN_NOT || peek_next.type == TOKEN_SUB || peek_next.type == TOKEN_BITNOT || peek_next.type == TOKEN_BITAND) {
+    if (peek_next.type == TOKEN_NOT ||
+        peek_next.type == TOKEN_SUB ||
+        peek_next.type == TOKEN_BITNOT ||
+        peek_next.type == TOKEN_BITAND ||
+        peek_next.type == TOKEN_MUL) {
         _debugprintf("Unary found!\n");
         auto next = tokenizer.read_next(); 
         int operation = token_to_operation(next);
@@ -1157,6 +1163,8 @@ Crank_Expression* parse_unary(Tokenizer_State& tokenizer) {
             operation = OPERATOR_NEGATE;
         } else if (operation == OPERATOR_BITAND) {
             operation = OPERATOR_ADDRESSOF;
+        } else if (operation == OPERATOR_MUL) {
+            operation = OPERATOR_DEREFERENCE;
         }
 
         assert(operation != -1 && "something went wrong here.");
