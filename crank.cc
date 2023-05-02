@@ -1121,6 +1121,12 @@ Crank_Statement* parse_for_statement(Tokenizer_State& tokenizer) {
         for_statement->type = STATEMENT_FOR;
 
         auto& for_statement_data = for_statement->for_statement;
+        bool needs_closing_parenthesis = false;
+
+        if (tokenizer.peek_next().type == TOKEN_LEFT_PARENTHESIS) {
+            needs_closing_parenthesis = true;
+            tokenizer.read_next();
+        }
 
         {
             bool terminate = false;
@@ -1173,6 +1179,13 @@ Crank_Statement* parse_for_statement(Tokenizer_State& tokenizer) {
                     terminate = true;
                 }
             }
+        }
+
+        if (needs_closing_parenthesis) {
+            assert(
+                tokenizer.read_next().type == TOKEN_RIGHT_PARENTHESIS &&
+                "You need closing parenthesis for this for loop!"
+            );
         }
 
         for_statement_data.body = parse_block_statement(tokenizer);
