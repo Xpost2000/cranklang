@@ -235,7 +235,33 @@ protected:
     }
 
     void output_statement(Crank_Module& current_module, FILE* output, Crank_Statement* statement) {
+        if (!statement) return;
+
         switch (statement->type) {
+            case STATEMENT_FOR: {
+                // I don't ever generate normal for loops
+                // since my initialization statements are probably illegal. LOL
+                auto& for_loop = statement->for_statement;
+                fprintf(output, "{\n");
+                for (auto& initializer : for_loop.initialization_statements) {
+                    output_statement(current_module, output, initializer);
+                }
+
+                fprintf(output, "while (");
+                if (!for_loop.condition) {
+                    fprintf(output, "true");
+                } else {
+                    output_expression(current_module, output, for_loop.condition);
+                }
+                fprintf(output, ") {\n");
+                output_statement(current_module, output, for_loop.body);
+
+                for (auto& postloop_statement : for_loop.postloop_statements) {
+                    output_statement(current_module, output, postloop_statement);
+                }
+                fprintf(output, "}\n");
+                fprintf(output, "}\n");
+            } break;
             case STATEMENT_BLOCK: {
                 fprintf(output, "{\n");
                 for (auto& inner_statement : statement->block_statement.body) {

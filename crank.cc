@@ -1193,6 +1193,8 @@ Crank_Statement* parse_for_statement(Tokenizer_State& tokenizer) {
 
         _debugprintf("For loop: %d initializations, %d post actions", for_statement_data.initialization_statements.size(), for_statement_data.postloop_statements.size());
         _debugprintf("For loop: %p condition? %p body?\n", for_statement_data.condition, for_statement_data.body);
+
+        return for_statement;
     }
 
     return nullptr;
