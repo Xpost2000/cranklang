@@ -887,6 +887,8 @@ bool is_value_expression_constant(Crank_Expression* expression) {
             }
         }
     }
+    
+    return false;
 }
 
 bool is_unary_expression_constant(Crank_Expression* expression) {
@@ -1017,10 +1019,10 @@ Crank_Expression* fold_constant_numeric_unary_expression(Crank_Expression* expre
     // unimplemented("fold_constant_numeric_unary_expression not implemented yet!");
     Crank_Expression* result = new Crank_Expression;
     result->type = EXPRESSION_VALUE;
-    result->value = expression->value;
+    result->value = unary.value->value;
     if (expression->operation == OPERATOR_NEGATE) {
         if (is_type_integer(result->value.type)) {
-            assert(is_type_unsigned_integer(result->value.type) && "NOTE: negating an unsigned number is not defined?");
+            assert(!is_type_unsigned_integer(result->value.type) && "NOTE: negating an unsigned number is not defined?");
             result->value.int_value *= -1;
         }
     } else {
@@ -2056,6 +2058,7 @@ bool read_enum_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
 
             // found value
             auto new_value = parse_expression(tokenizer);
+            _debugprintf("Do I have an expression: %p", new_value);
             // NOTE: I need to assert it is an integer.
             // NOTE: this will have undefined behavior if I can't determine it is
             // going to be an int;
@@ -2166,6 +2169,7 @@ Error<Crank_Declaration> parse_typedef(Tokenizer_State& tokenizer) {
             assert(is_type_integer(typedecl.object_type->enum_internal_type) && "Enums can only be tagged after integer types!");
 
             assert(tokenizer.read_next().type == TOKEN_LEFT_CURLY_BRACE && "Invalid start to tagged enum item");
+            _debugprintf("Reading enum: %.*s", unwrap_string_view(name.string));
             if (read_enum_definition(typedecl.object_type, tokenizer)) {
                 _debugprintf("Read new enum definition\n");
                 return Error<Crank_Declaration>::okay(typedecl);

@@ -12,7 +12,7 @@
 */
 
 // imply starting at 0
-typedef LightSignal: enum i32 {
+typedef LightSignal: enum s32 {
         RED,
         BLUE,
         GREEN,

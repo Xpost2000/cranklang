@@ -36,16 +36,16 @@ typedef int16_t i16;
 typedef int8_t  i8;
 
 typedef u32 uint;
-enum class LightSignal : i32 { // enum name
+enum class LightSignal : s32 { // enum name
 RED = 0,BLUE = 1,GREEN = 2,};;
 enum class TestFlagBinary : u64 { // enum name
-a = 99,b = 99,c = 99,d = 99,e = 99,};;
+a = 0,b = 1,c = 2,d = 3,e = 4,};;
 enum class TestFlagHex : u64 { // enum name
-a = 99,b = 99,c = 99,d = 99,e = 99,f = 99,g = 99,h = 99,i = 99,j = 99,k = 99,l = 99,m = 99,n = 99,o = 99,p = 99,q = 99,r = 99,s = 99,t = 99,};;
+a = 0,b = 1,c = 2,d = 3,e = 4,f = 5,g = 6,h = 7,i = 8,j = 9,k = 10,l = 11,m = 12,n = 13,o = 14,p = 15,q = 16,r = 17,s = 18,t = 255,};;
 enum class Numbers : s8 { // enum name
-NegativeFive = 99,NegativeFour = 100,NegativeThree = 101,NegativeTwo = 102,NegativeOne = 103,Zero = 104,One = 105,Two = 106,Three = 107,Four = 108,Five = 109,};;
+NegativeFive = -5,NegativeFour = -4,NegativeThree = -3,NegativeTwo = -2,NegativeOne = -1,Zero = 0,One = 1,Two = 2,Three = 3,Four = 4,Five = 5,};;
 enum class numbers2 : s8 { // enum name
-A = 99,B = 100,C = 101,D = 99,E = 100,};;
+A = 3,B = 4,C = 5,D = 10,E = 11,};;
 extern "C" {
 int  printf(char * fmt);}; // end extern "C" 
 
@@ -60,7 +60,7 @@ int  i = 3;
 printf("i: %d, j: %d\n", i, j);}
 i+=1;j-=1;}
 }
-printf("I want to get an enum!!! %d %d\n", (s8)numbers2::A, (s8)numbers2::D+(i32)LightSignal::RED);return 0;
+printf("I want to get an enum!!! %d %d\n", (s8)numbers2::A, (s8)numbers2::D+(s32)LightSignal::RED);return 0;
 }
 
 /**
