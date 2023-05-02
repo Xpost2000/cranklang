@@ -810,17 +810,45 @@ Crank_Expression* value_expression(Crank_Value value) {
 }
 
 // Expression check helpers
-
+bool is_constant_expression(Crank_Expression* expression);
 bool is_value_expression_constant(Crank_Expression* expression) {
     unimplemented("is_value_expression_constant");
 }
 
 bool is_unary_expression_constant(Crank_Expression* expression) {
-    unimplemented("is_unary_expression_constant");
+    auto& unary = expression->unary;
+
+    if (expression->operation == OPERATOR_ARRAY_INDEX ||
+        expression->operation == OPERATOR_ADDRESSOF) {
+        // by definition these are not "constant" expressions
+        // (well okay, array-index *can* be numeric, but for now I'll say they aren't to be safe)
+        return false;
+    }
+
+    return is_constant_expression(unary.value);
 }
 
 bool is_binary_expression_constant(Crank_Expression* expression) {
-    unimplemented("is_binary_expression_constant");
+    auto& binary = expression->binary;
+    if (expression->operation == OPERATOR_EQUAL ||
+        expression->operation == OPERATOR_ADDEQUAL ||
+        expression->operation == OPERATOR_SUBEQUAL ||
+        expression->operation == OPERATOR_MULEQUAL ||
+        expression->operation == OPERATOR_DIVEQUAL ||
+        expression->operation == OPERATOR_MODEQUAL) {
+        return false;
+    }
+
+    // This has to be special-cased for enums, because enums **are**
+    // constant values.
+    // NOTE: can also be used for if records have associated static values
+    // but that's not something I'm into, so I'll avoid it.
+    if (expression->operation == OPERATOR_PROPERTY_ACCESS) {
+        unimplemented("TODO: check if this is an enum!");
+        return false;
+    }
+
+    return is_constant_expression(binary.first) && is_constant_expression(binary.second);
 }
 
 bool is_constant_expression(Crank_Expression* expression) {
@@ -836,16 +864,27 @@ bool is_constant_expression(Crank_Expression* expression) {
     return false;
 }
 
+bool is_expression_numeric(Crank_Expression* expression);
 bool is_value_expression_numeric(Crank_Expression* expression) {
     unimplemented("is_value_expression_numeric");
 }
 
 bool is_unary_expression_numeric(Crank_Expression* expression) {
-    unimplemented("is_unary_expression_numeric");
+    auto& unary = expression->unary;
+    return is_expression_numeric(unary.value);
 }
 
 bool is_binary_expression_numeric(Crank_Expression* expression) {
-    unimplemented("is_binary_expression_numeric");
+    auto& binary = expression->binary;
+
+    // This has to be special-cased for enums, because enums **are**
+    // also numeric values.
+    if (expression->operation == OPERATOR_PROPERTY_ACCESS) {
+        unimplemented("TODO: check if this is an enum!");
+        return false;
+    }
+
+    return is_expression_numeric(binary.first) && is_expression_numeric(binary.second);
 }
 
 bool is_expression_numeric(Crank_Expression* expression) {
