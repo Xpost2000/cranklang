@@ -324,6 +324,9 @@ protected:
         if (value->value_type == VALUE_TYPE_LITERAL) {
             auto typeof_object = value->type;
 
+            // NOTE: when "using" is active
+            // that can be a little scary :)
+
             if (typeof_object->type == TYPE_STRINGLITERAL) {
                 // C++ is too permissive lol. So I need to figure this one out.
                 // TODO: write a crank string runtime type
@@ -391,12 +394,8 @@ protected:
         // assume this is at root
         // this is for "invisible fields"
         if (expression->operation == OPERATOR_PROPERTY_ACCESS) {
-            // TODO: I'm hitting my 1 hour and a half quota.
-            // auto& first = expression->binary.first;
-            // check if the first is either a registered base type
-            // (we cannot check on derivative types unfortunately)
-            // I don't believe crank will parse them correctly
-            // auto& second = expression->binary.second;
+            if (!overrode_behavior)
+                overrode_behavior |= try_and_emit_cplusplus_enum_class(current_module, output, expression);
         }
 
         if (!overrode_behavior) {
@@ -411,5 +410,36 @@ protected:
             #include "crank-cpp-runtime/crank_main_point_entry.cpp"
             ;
         fprintf(output, "%s", crank_main_point_entry_cpp);
+    }
+private:
+    bool try_and_emit_cplusplus_enum_class(Crank_Module& current_module, FILE* output, Crank_Expression* expression) {
+        auto& first = expression->binary.first;
+        // wish I had some helpers.
+        if (first->type == EXPRESSION_VALUE &&
+            first->value.value_type == VALUE_TYPE_SYMBOL) {
+            auto& symbol_name = first->value.symbol_name;
+            auto enum_type    = crank_type_system_find_enum_decl((char*)symbol_name.c_str());
+
+            if (enum_type) {
+                _debugprintf("Property access on enum. Hijacking output to produce scoped access");
+                auto& second = expression->binary.second;
+
+                assert(
+                    second->type == EXPRESSION_VALUE &&
+                    second->value.value_type == VALUE_TYPE_SYMBOL &&
+                    "enum value access error! Second param of property access should be the value!"
+                );
+
+                auto underlying_type = enum_type->enum_internal_type;
+                underlying_type = follow_typedef_chain(underlying_type);
+                fprintf(output, "(%s)%s::%s",
+                        underlying_type->name.c_str(),
+                        symbol_name.c_str(),
+                        second->value.symbol_name.c_str()
+                );
+                return true;
+            }
+        }
+        return false;
     }
 };

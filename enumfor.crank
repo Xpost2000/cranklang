@@ -117,5 +117,7 @@ main: int(argc: int, argv: strlit[]) {
           printf("i: %d, j: %d\n", i, j);
       }
 
+      printf("I want to get an enum!!! %d %d\n", numbers2.A, numbers2.D + LightSignal.RED);
+
       return 0;
 };

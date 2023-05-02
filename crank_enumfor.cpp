@@ -58,7 +58,7 @@ int  i = 3;
 printf("i: %d, j: %d\n", i, j);}
 i+=1;j-=1;}
 }
-return 0;
+printf("I want to get an enum!!! %d %d\n", (s8)numbers2::A, (s8)numbers2::D+(i32)LightSignal::RED);return 0;
 }
 
 /**
