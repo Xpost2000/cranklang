@@ -20,6 +20,15 @@ char escape(char what) {
     return 0;
 }
 
+bool valid_hex_character(char c) {
+    switch (c) {
+        case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+        case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
+        case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
+            return true;
+    }
+    return false;
+}
 bool is_good_for_identifier(char c) {
     return (isalnum(c) || c == '_' || c == '$');
 }
@@ -42,23 +51,27 @@ int hex_char_value(char c) {
 
 uint64_t uinteger_pow(int x, int b) {
     uint64_t result = 1;
-    for (int i = 0; i < x; ++x) result *= b;
+    for (int i = 0; i < b; ++i) result *= x;
     return result;
 }
 uint64_t interpret_hex_string(char* hex_string, int length) {
     uint64_t result = 0;
-    while (length--) {
-        int hex_value = hex_char_value(hex_string[length]);
-        result += hex_value * uinteger_pow(16, length);
+    int i = length;
+    while (i) {
+        int hex_value = hex_char_value(hex_string[length-i]);
+        result += hex_value * uinteger_pow(16, (i-1));
+        i--;
     }
     return result;
 }
 
 uint64_t interpret_binary_string(char* binary_string, int length) {
     uint64_t result = 0;
-    while (length--) {
-        if (binary_string[length] == '1')
-            result |= (1 << length);
+    int i = length;
+    while (i) {
+        if (binary_string[length - i] == '1')
+            result |= (1 << (i-1));
+        i--;
     }
     return result;
 }
@@ -442,21 +455,13 @@ Token Tokenizer_State::read_next() {
                         switch (peek_character()) {
                             case 'X':
                             case 'x': { // parse hexadecimal
-                                _debugprintf("Reading hexadecimal literal!\n");
                                 next_character();
                                 char hex_string[16] = {};
                                 for (int i = 0; i < 16; ++i) hex_string[i] = '0';
 
                                 int length = 0;
-                                while (isdigit(peek_character())) {
+                                while (valid_hex_character(peek_character())) {
                                     char c = next_character();
-                                    assert((c == '0' || c == '1' || c == '2' || c == '3' ||
-                                            c == '4' || c == '5' || c == '6' || c == '7' ||
-                                            c == '8' || c == '9' || c == 'A' || c == 'B' ||
-                                            c == 'C' || c == 'D' || c == 'E' || c == 'F' ||
-                                            c == 'a' || c == 'b' || c == 'c' || c == 'd' ||
-                                            c == 'e' || c == 'f') &&
-                                           "Invalid characters for hex literal");
                                     hex_string[length++] = c;
                                 }
 
@@ -467,7 +472,6 @@ Token Tokenizer_State::read_next() {
                             } break;
                             case 'B':
                             case 'b': { // parse binary
-                                _debugprintf("Reading binary literal!\n");
                                 next_character();
                                 char binary_string[64] = {};
                                 for (int i = 0; i < 64; ++i) binary_string[i] = '0';

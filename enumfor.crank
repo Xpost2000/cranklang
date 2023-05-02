@@ -19,9 +19,33 @@ typedef LightSignal: enum i32 {
 };
 
 typedef TestFlagBinary: enum u64 {
-        FlagOne   = 0b1,
-        FlagTwo   = 0b10,
-        FlagThree = 0b100,
+        a = 0b0,
+        b = 0b1,
+        c = 0b10,
+        d = 0b11,
+        e = 0b100,
+};
+typedef TestFlagHex: enum u64 {
+        a = 0x0,
+        b = 0x1,
+        c = 0x2,
+        d = 0x3,
+        e = 0x4,
+        f = 0x5,
+        g = 0x6,
+        h = 0x7,
+        i = 0x8,
+        j = 0x9,
+        k = 0xA,
+        l = 0xb,
+        m = 0xc,
+        n = 0xd,
+        o = 0xe,
+        p = 0xf,
+        q = 0x10,
+        r = 0x11,
+        s = 0x12,
+        t = 0xFF,
 };
 
 // NOTE:
