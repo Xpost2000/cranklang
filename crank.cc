@@ -812,8 +812,72 @@ Crank_Expression* value_expression(Crank_Value value) {
 
 // Expression check helpers
 bool is_constant_expression(Crank_Expression* expression);
+bool is_expression_numeric(Crank_Expression* expression);
+
+/*
+ * Constant values are literals for now for simplicity. But they should extend for any "const"
+ * thing that I can ensure is constant.
+ *
+ * Maybe functions that are also marked "const", however they must not have
+ * external linkage because Crank doesn't have an FFI and cannot execute arbitrary functions
+ * at compile/runtime yet (or ever, since it's a pretty massive undertaking without libffi...)
+ *
+ * I can "polyfill" certain functions maybe (like sin, cos, pow), basically any math
+ */
 bool is_value_expression_constant(Crank_Expression* expression) {
-    unimplemented("is_value_expression_constant");
+    auto& value = expression->value;
+    if (value.value_type == VALUE_TYPE_LITERAL) {
+        auto object_type = follow_typedef_chain(value.type);
+
+        // NOTE: function should take priority
+        // and this should take priority?
+        // need to really investigate how this will behave when testing.
+#if 0
+        if (value.array_elements.size()) {
+            // if it's an array we'll have to just check if each array element is constant.
+            for (auto& element : value.array_elements) {
+                if (!is_constant_expression(element)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+#endif
+
+        // check for function?
+
+        {
+            if (is_type_numeric(object_type)) {
+                return true;
+            } else {
+                // record or union
+                // or otherwise. Something kind of nasty.
+                if (object_type->type == TYPE_RECORD ||
+                    object_type->type == TYPE_UNION) {
+                    auto object_literal = value.literal_value;
+                    if (object_literal->type == OBJECT_LITERAL_DECL_ORDERED) {
+                        for (auto& member : object_literal->expressions) {
+                            if (!is_constant_expression(member)) {
+                                return false;
+                            }
+                        }
+
+                        return true;
+                    } else {
+                        for (auto& member : object_literal->named_values) {
+                            if (!is_constant_expression(member.expression)) {
+                                return false;
+                            }
+                        }
+
+                        return true;
+                    }
+                    unimplemented("Do not know how to check for constant record/union");
+                }
+            }
+        }
+    }
 }
 
 bool is_unary_expression_constant(Crank_Expression* expression) {
@@ -865,7 +929,6 @@ bool is_constant_expression(Crank_Expression* expression) {
     return false;
 }
 
-bool is_expression_numeric(Crank_Expression* expression);
 bool is_value_expression_numeric(Crank_Expression* expression) {
     unimplemented("is_value_expression_numeric");
 }
