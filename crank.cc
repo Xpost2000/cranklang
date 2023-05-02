@@ -1751,6 +1751,7 @@ bool read_enum_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
 
         int64_t current_value = start_counting_from++;
         if (tokenizer.peek_next().type == TOKEN_EQUAL) {
+            tokenizer.read_next();
             // Sorry! no expression evaluation here!
             // unless I figure out how to determine if expressions are constant!
 
