@@ -1124,7 +1124,6 @@ Crank_Statement* parse_for_statement(Tokenizer_State& tokenizer) {
 
         {
             bool terminate = false;
-            bool first = true;
             while (!terminate) {
                 _debugprintf("trying to parse declaration\n");
                 int current_read_cursor = tokenizer.read_cursor;
@@ -1133,33 +1132,46 @@ Crank_Statement* parse_for_statement(Tokenizer_State& tokenizer) {
                     for_statement_data.initialization_statements.push_back(declaration_statement);
                 } else {
                     tokenizer.read_cursor = current_read_cursor;
-                    terminate = true;
-                    if (!first) continue; // avoid semicolon check.
                 }
-                assert(tokenizer.read_next().type == TOKEN_SEMICOLON && "For loop requires a semicolon to terminate things!");
-                first = false;
+
+                auto next = tokenizer.read_next();
+
+                if (next.type == TOKEN_SEMICOLON) {
+                    // terminate;
+                    terminate = true;
+                } else if (next.type == TOKEN_COMMA) {
+                    continue;
+                } else {
+                    assert(0 && "Illegal next token read?");
+                }
             }
         }
         for_statement_data.condition = parse_expression(tokenizer);
         assert(tokenizer.read_next().type == TOKEN_SEMICOLON && "You need a semicolon after the condition!");
         {
             bool terminate = false;
-            bool first = true;
             while (!terminate) {
                 int current_read_cursor = tokenizer.read_cursor;
                 auto any_statement = parse_expression_statement(tokenizer);
-                if (!any_statement) any_statement = parse_if_statement(tokenizer);
+
+                if (!any_statement) { 
+                    _debugprintf("Rewind. Failed to read expression!");
+                    tokenizer.read_cursor = current_read_cursor;
+                    any_statement = parse_if_statement(tokenizer);
+                }
 
                 if (any_statement) { // if is allowed because this language has no ternary operators.
                     for_statement_data.postloop_statements.push_back(any_statement);
-                } else {
-                    // NOTE: I unread the statement.
-                    tokenizer.read_cursor = current_read_cursor;
-                    terminate = true;
-                    if (!first) continue; // avoid semicolon check.
-                    assert(tokenizer.read_next().type == TOKEN_SEMICOLON && "You need a semicolon for empty post action list!");
                 }
-                first = false;
+
+                auto next = tokenizer.peek_next();
+
+                if (next.type == TOKEN_COMMA) {
+                    tokenizer.read_next();
+                    continue;
+                } else {
+                    terminate = true;
+                }
             }
         }
 
