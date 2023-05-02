@@ -1018,7 +1018,14 @@ Crank_Expression* fold_constant_numeric_unary_expression(Crank_Expression* expre
     Crank_Expression* result = new Crank_Expression;
     result->type = EXPRESSION_VALUE;
     result->value = expression->value;
-    if (is_type_integer(result->value))
+    if (expression->operation == OPERATOR_NEGATE) {
+        if (is_type_integer(result->value.type)) {
+            assert(is_type_unsigned_integer(result->value.type) && "NOTE: negating an unsigned number is not defined?");
+            result->value.int_value *= -1;
+        }
+    } else {
+        assert(false && "undefined operation behavior for now!");
+    }
     return result;
 }
 Crank_Expression* fold_constant_numeric_binary_expression(Crank_Expression* expression) {
@@ -2052,6 +2059,7 @@ bool read_enum_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
             // NOTE: I need to assert it is an integer.
             // NOTE: this will have undefined behavior if I can't determine it is
             // going to be an int;
+            assert(new_value && "I should have an expression.");
             assert(is_expression_numeric(new_value) && "enum value should be a numeric expression!");
             assert(is_constant_expression(new_value) && "enum value should be a constant expression!");
             new_value = fold_constant_numeric_expression(new_value);
