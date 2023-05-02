@@ -395,7 +395,7 @@ protected:
         // this is for "invisible fields"
         if (expression->operation == OPERATOR_PROPERTY_ACCESS) {
             if (!overrode_behavior)
-                overrode_behavior |= try_and_emit_cplusplus_enum_class(current_module, output, expression);
+                overrode_behavior |= try_and_emit_enum(current_module, output, expression);
         }
 
         if (!overrode_behavior) {
@@ -412,7 +412,7 @@ protected:
         fprintf(output, "%s", crank_main_point_entry_cpp);
     }
 private:
-    bool try_and_emit_cplusplus_enum_class(Crank_Module& current_module, FILE* output, Crank_Expression* expression) {
+    bool try_and_emit_enum(Crank_Module& current_module, FILE* output, Crank_Expression* expression) {
         auto& first = expression->binary.first;
         // wish I had some helpers.
         if (first->type == EXPRESSION_VALUE &&
