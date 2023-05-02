@@ -999,9 +999,30 @@ Crank_Type* get_expression_type(Crank_Expression* expression, bool strict=false)
     unimplemented("get_expression_type");
 }
 
-// NOTE: will only work with numeric types;
-Crank_Expression* fold_constants() {
-    unimplemented("fold_constants");
+// NOTE: will only work with numeric types for now
+// folding arrays should be possible in the future.
+// maybe even strings? Concatenation is pretty well defined
+Crank_Expression* fold_constant_numeric_expression(Crank_Expression* expression);
+
+Crank_Expression* fold_constant_numeric_unary_expression(Crank_Expression* expression) {
+    auto& unary = expression->unary;
+    unimplemented("fold_constant_numeric_unary_expression not implemented yet!");
+}
+Crank_Expression* fold_constant_numeric_binary_expression(Crank_Expression* expression) {
+    auto& binary = expression->binary;
+    unimplemented("fold_constant_numeric_binary_expression not implemented yet! I require numeric_type_promotion!");
+}
+Crank_Expression* fold_constant_numeric_expression(Crank_Expression* expression) {
+    if (!is_constant_expression(expression)) return nullptr;
+    if (!is_expression_numeric(expression)) return nullptr;
+
+    switch (expression->type) {
+        case EXPRESSION_VALUE:  return expression;
+        case EXPRESSION_UNARY:  return fold_constant_numeric_unary_expression(expression);
+        case EXPRESSION_BINARY: return fold_constant_numeric_binary_expression(expression);
+    }
+
+    return nullptr;
 }
 
 // End of Expression check helpers
@@ -2012,10 +2033,22 @@ bool read_enum_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
 
             // found value
             auto new_value = parse_expression(tokenizer);
+            // NOTE: I need to assert it is an integer.
+            // NOTE: this will have undefined behavior if I can't determine it is
+            // going to be an int;
             assert(is_expression_numeric(new_value) && "enum value should be a numeric expression!");
             assert(is_constant_expression(new_value) && "enum value should be a constant expression!");
-            // assert(new_value.type == TOKEN_NUMBERINT && "Enum init should be a constant integer!");
-            current_value = start_counting_from = 99;
+            new_value = fold_constant_numeric_expression(new_value);
+
+            // NOTE: have to handle case where we get a binary expression that is
+            // actually an enum
+            // because I have to lookup the enum and use the literal value.
+            
+            if (new_value->type == EXPRESSION_VALUE) {
+                current_value = start_counting_from = new_value->value.int_value;
+            } else {
+                assert(new_value->type == EXPRESSION_BINARY && "This should be a property access, but firstly that must be binary!"); 
+            }
             start_counting_from++;
         } else {
             // nothing
