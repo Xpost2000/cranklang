@@ -36,36 +36,3 @@ typedef int16_t i16;
 typedef int8_t  i8;
 
 typedef u32 uint;
-extern "C" {
-int  printf(char * fmt);}; // end extern "C" 
-
-int  crank_mainpoint_entry(int  argc, std::string  argv[]);
-int  crank_mainpoint_entry(int  argc, std::string  argv[])
-{
-printf("Here's an interesting for loop");{
-int  i = 3;
-;int  j = 13;
-;while (i<j) {
-{
-printf("i: %d, j: %d\n", i, j);}
-i+=1;j-=1;}
-}
-return 0;
-}
-
-/**
-   This file is copy and pasted wholesale,
-
-   DO NOT TOUCH ME!
-
-   ASSUMED std::string is usable, and vector!
-**/
-
-int main(int argc, char** argv) {
-    std::vector<std::string> arguments;
-    for (int i = 0; i < argc; ++i) {
-        arguments.push_back(argv[i]);
-    }
-
-    return crank_mainpoint_entry(arguments.size(), arguments.data());
-}

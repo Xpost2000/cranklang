@@ -34,7 +34,7 @@
   NOTE: in transpiler mode, I don't have to evaluate the expressions... I just need
   to make sure they evaluate to the right type.
 
-  Most of this code is "backend"/"compiler" logic.
+  Most of this code is "backend"/"compiler" logic. 
 
   A minimally useful language?
 
@@ -49,6 +49,10 @@
   complicated...
   NOTE: Crank is not supporting multiple declarations either. It probably could with slight changes to the parser
   but it's not something I usually do or like...
+
+  NOTE: I use a lot of megastructs since it's simpler, but inheritance is possible to reduce
+  size of structs. But this probably doesn't matter too much in a lot of cases I need. Besides it's
+  quicker for me to learn how to write a compiler this way anyways.
 */
 #include "crank-cpp-runtime/crank_preamble.h"
 #include "tokenizer.h"
@@ -199,6 +203,11 @@ Crank_Declaration make_uninitialized_object_decl(Crank_Type* type, std::string n
     return result;
 }
 
+struct Crank_Enum_KeyValue {
+    std::string name;
+    int64_t value;
+};
+
 struct Crank_Type {
     /*
      * base type of object.
@@ -223,6 +232,8 @@ struct Crank_Type {
      *
      * For enum, I will check to make sure that these are some form of integer type.
      */
+    Crank_Type* enum_internal_type = nullptr;
+    std::vector<Crank_Enum_KeyValue> enum_members;
     std::vector<Crank_Declaration> members;
 };
 
@@ -255,6 +266,22 @@ bool crank_type_match(Crank_Type* a, Crank_Type* b) {
     }
 
     return false;
+}
+
+bool crank_is_integer_type(Crank_Type* type) {
+    switch (type->type) {
+        case TYPE_INTEGER8:
+        case TYPE_INTEGER16:
+        case TYPE_INTEGER32:
+        case TYPE_INTEGER64:
+        case TYPE_UNSIGNEDINTEGER8:
+        case TYPE_UNSIGNEDINTEGER16:
+        case TYPE_UNSIGNEDINTEGER32:
+        case TYPE_UNSIGNEDINTEGER64:
+            return true;
+        default:
+            return false;
+    }
 }
 
 // globally registered types
@@ -1707,6 +1734,45 @@ bool read_union_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
     return true;
 }
 
+bool read_enum_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
+    assert(type->type == TYPE_ENUMERATION && "?");
+    _debugprintf("Trying to read decl\n");
+
+    int64_t start_counting_from = 0; // for counting values
+
+    while (tokenizer.peek_next().type == TOKEN_SYMBOL) { // I don't think I need to check this anymore b/c read_inline_declaration returns error but okay
+        // NOTE: I should allow inner anonymous structs and unions.
+        // not variants though. Those are a special case?
+        auto value_name = tokenizer.read_next();
+
+        int64_t current_value = start_counting_from++;
+        if (tokenizer.peek_next().type == TOKEN_EQUAL) {
+            // Sorry! no expression evaluation here!
+            // unless I figure out how to determine if expressions are constant!
+
+            // found value
+            auto new_value = tokenizer.read_next();
+            assert(new_value.type == TOKEN_NUMBERINT && "Enum init should be a constant integer!");
+            current_value = start_counting_from = new_value.value32;
+        } else {
+            // nothing
+        }
+
+        assert(tokenizer.peek_next().type == TOKEN_SEMICOLON || tokenizer.peek_next().type == TOKEN_COMMA);
+        tokenizer.read_next();
+        {
+            Crank_Enum_KeyValue kv;
+            kv.name = value_name.string;
+            kv.value = current_value;
+            _debugprintf("added enum member: %.*s\n", unwrap_string_view(value_name.string));
+            type->enum_members.push_back(kv);
+        }
+    }
+    printf("Finished reading decl! (%d members?)\n", type->enum_members.size());
+    assert(tokenizer.read_next().type == TOKEN_RIGHT_CURLY_BRACE);
+    return true;
+}
+
 Error<Crank_Declaration> parse_typedef(Tokenizer_State& tokenizer) {
     auto name = tokenizer.read_next();
     if (name.type != TOKEN_SYMBOL) return Error<Crank_Declaration>::fail("Typedef name is not a symbol!");
@@ -1742,7 +1808,6 @@ Error<Crank_Declaration> parse_typedef(Tokenizer_State& tokenizer) {
         auto determiner = tokenizer.peek_next();
         if (determiner.type != TOKEN_SYMBOL) return Error<Crank_Declaration>::fail("Need symbol descriptor to discriminate!");
         tokenizer.read_next();
-        assert(tokenizer.read_next().type == TOKEN_LEFT_CURLY_BRACE && "Invalid start to tagged item");
 
         if (determiner.string == "struct") {
             Crank_Declaration typedecl;
@@ -1750,13 +1815,13 @@ Error<Crank_Declaration> parse_typedef(Tokenizer_State& tokenizer) {
             typedecl.name = name.string;
             typedecl.object_type = register_new_type(name.string, TYPE_RECORD);
 
+            assert(tokenizer.read_next().type == TOKEN_LEFT_CURLY_BRACE && "Invalid start to tagged struct item");
             if (read_record_definition(typedecl.object_type, tokenizer)) {
                 _debugprintf("Read new record definition\n");
                 return Error<Crank_Declaration>::okay(typedecl);
             } else {
                 return Error<Crank_Declaration>::fail("Failed to read record definition");
             }
-            // typedecl.array_dimensions;
             typedecl.name = name.string;
         } else if (determiner.string == "union") {
             Crank_Declaration typedecl;
@@ -1764,16 +1829,34 @@ Error<Crank_Declaration> parse_typedef(Tokenizer_State& tokenizer) {
             typedecl.name = name.string;
             typedecl.object_type = register_new_type(name.string, TYPE_UNION);
 
+            assert(tokenizer.read_next().type == TOKEN_LEFT_CURLY_BRACE && "Invalid start to tagged struct item");
             if (read_union_definition(typedecl.object_type, tokenizer)) {
                 _debugprintf("Read new union definition\n");
                 return Error<Crank_Declaration>::okay(typedecl);
             } else {
                 return Error<Crank_Declaration>::fail("Failed to read record definition");
             }
-            // typedecl.array_dimensions;
             typedecl.name = name.string;
         } else if (determiner.string == "enum") {
-            assert(!"Not enum implemented yet!");
+            Crank_Declaration typedecl;
+            typedecl.decl_type = DECL_TYPE;
+            typedecl.name = name.string;
+            typedecl.object_type = register_new_type(name.string, TYPE_ENUMERATION);
+
+            auto enum_type = tokenizer.read_next();
+            if (determiner.type != TOKEN_SYMBOL) return Error<Crank_Declaration>::fail("Need symbol descriptor to discriminate!");
+
+            typedecl.object_type->enum_internal_type = lookup_type(enum_type.string);
+            assert(crank_is_integer_type(typedecl.object_type->enum_internal_type) && "Enums can only be tagged after integer types!");
+
+            assert(tokenizer.read_next().type == TOKEN_LEFT_CURLY_BRACE && "Invalid start to tagged enum item");
+            if (read_enum_definition(typedecl.object_type, tokenizer)) {
+                _debugprintf("Read new enum definition\n");
+                return Error<Crank_Declaration>::okay(typedecl);
+            } else {
+                return Error<Crank_Declaration>::fail("Failed to read record definition");
+            }
+            typedecl.name = name.string;
         } else {
             return Error<Crank_Declaration>::fail("Invalid tag for typedef!");
         }
@@ -1864,6 +1947,10 @@ Error<Crank_Module> load_module_from_source(std::string module_name, std::string
             case TOKEN_NONE: {
                 tokenizer.read_next();
                 // safe, is EOF
+            } break;
+            case TOKEN_SEMICOLON: {
+                // harmless
+                tokenizer.read_next();
             } break;
             default: {
                 /* TODO better error message? */

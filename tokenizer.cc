@@ -243,6 +243,8 @@ Token Tokenizer_State::read_next() {
                     continue;
                     // This leads to weird parsing problems right now, so
                     // I don't advice it for myself right now.
+                    
+                    // NOTE: just add an "ignore-comment" flag or something
                     // return comment;
                 } else {
                     Token result      = {};
