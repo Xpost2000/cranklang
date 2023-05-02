@@ -53,6 +53,8 @@
   NOTE: I use a lot of megastructs since it's simpler, but inheritance is possible to reduce
   size of structs. But this probably doesn't matter too much in a lot of cases I need. Besides it's
   quicker for me to learn how to write a compiler this way anyways.
+
+  TODO: add a formal "error" reporter and avoid asserting so much
 */
 #include "crank-cpp-runtime/crank_preamble.h"
 #include "tokenizer.h"
@@ -1395,6 +1397,8 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
                  * Don't need a fancy parser. Need a working language.
                  *
                  * This isn't like C++ with initializers. Only for objects.
+                 *
+                 * NOTE: should move this to a separate procedure to reduce the size of this part
                  */
                 tokenizer.read_next();
                 // I don't have the ternary operator in this language so it's okay
@@ -1809,10 +1813,11 @@ Error<Crank_Declaration> parse_typedef(Tokenizer_State& tokenizer) {
         if (determiner.type != TOKEN_SYMBOL) return Error<Crank_Declaration>::fail("Need symbol descriptor to discriminate!");
         tokenizer.read_next();
 
+        Crank_Declaration typedecl;
+        typedecl.decl_type = DECL_TYPE;
+        typedecl.name = name.string;
+
         if (determiner.string == "struct") {
-            Crank_Declaration typedecl;
-            typedecl.decl_type = DECL_TYPE;
-            typedecl.name = name.string;
             typedecl.object_type = register_new_type(name.string, TYPE_RECORD);
 
             assert(tokenizer.read_next().type == TOKEN_LEFT_CURLY_BRACE && "Invalid start to tagged struct item");
@@ -1824,9 +1829,6 @@ Error<Crank_Declaration> parse_typedef(Tokenizer_State& tokenizer) {
             }
             typedecl.name = name.string;
         } else if (determiner.string == "union") {
-            Crank_Declaration typedecl;
-            typedecl.decl_type = DECL_TYPE;
-            typedecl.name = name.string;
             typedecl.object_type = register_new_type(name.string, TYPE_UNION);
 
             assert(tokenizer.read_next().type == TOKEN_LEFT_CURLY_BRACE && "Invalid start to tagged struct item");
@@ -1838,9 +1840,6 @@ Error<Crank_Declaration> parse_typedef(Tokenizer_State& tokenizer) {
             }
             typedecl.name = name.string;
         } else if (determiner.string == "enum") {
-            Crank_Declaration typedecl;
-            typedecl.decl_type = DECL_TYPE;
-            typedecl.name = name.string;
             typedecl.object_type = register_new_type(name.string, TYPE_ENUMERATION);
 
             auto enum_type = tokenizer.read_next();

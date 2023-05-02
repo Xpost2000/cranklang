@@ -18,6 +18,12 @@ typedef LightSignal: enum i32 {
         GREEN,
 };
 
+typedef TestFlagBinary: enum u64 {
+        FlagOne   = 0b1,
+        FlagTwo   = 0b10,
+        FlagThree = 0b100,
+};
+
 // NOTE:
 // these are generated as normal enums with a prefix.
 // Numbers_NegativeFive

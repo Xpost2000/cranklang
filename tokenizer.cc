@@ -1,3 +1,4 @@
+#include "crank-cpp-runtime/crank_preamble.h"
 #include "tokenizer.h"
 #include <cassert>
 
@@ -29,6 +30,39 @@ Token Tokenizer_State::peek_next() {
     read_cursor = now;
     return result;
 }
+
+int hex_char_value(char c) {
+    if (c >= '0' && c <= '9') return (int)c - '0';
+    else {
+        if (c >= 'a' && c <= 'f') return (int)c - 'a' + 10;
+        else if (c >= 'A' && c <= 'F') return (int)c - 'A' + 10;
+    }
+    return -1;
+}
+
+uint64_t uinteger_pow(int x, int b) {
+    uint64_t result = 1;
+    for (int i = 0; i < x; ++x) result *= b;
+    return result;
+}
+uint64_t interpret_hex_string(char* hex_string, int length) {
+    uint64_t result = 0;
+    while (length--) {
+        int hex_value = hex_char_value(hex_string[length]);
+        result += hex_value * uinteger_pow(16, length);
+    }
+    return result;
+}
+
+uint64_t interpret_binary_string(char* binary_string, int length) {
+    uint64_t result = 0;
+    while (length--) {
+        if (binary_string[length] == '1')
+            result |= (1 << length);
+    }
+    return result;
+}
+
 Token Tokenizer_State::read_next() {
     while (!finished()) {
         int  start_of_token = read_cursor;
@@ -396,12 +430,67 @@ Token Tokenizer_State::read_next() {
                 // symbol or number.
                 // TODO: more error handling. Don't care right now.
                 if (isdigit(current)) {
-                    Token result      = {};
-                    bool is_float = false;
-                    result.col_found  = read_cursor-1;
-                    result.line_found = line;
+                    // try to special case for different literals
+                    Token result         = {};
+                    int   start_of_digit = read_cursor-1;
+                    result.col_found     = read_cursor-1;
+                    result.line_found    = line;
+                    if (current == '0') {
+                        // 0x = hex
+                        // 0b = binary
+                        // no octal literals
+                        switch (peek_character()) {
+                            case 'X':
+                            case 'x': { // parse hexadecimal
+                                _debugprintf("Reading hexadecimal literal!\n");
+                                next_character();
+                                char hex_string[16] = {};
+                                for (int i = 0; i < 16; ++i) hex_string[i] = '0';
 
-                    int start_of_digit = read_cursor-1;
+                                int length = 0;
+                                while (isdigit(peek_character())) {
+                                    char c = next_character();
+                                    assert((c == '0' || c == '1' || c == '2' || c == '3' ||
+                                            c == '4' || c == '5' || c == '6' || c == '7' ||
+                                            c == '8' || c == '9' || c == 'A' || c == 'B' ||
+                                            c == 'C' || c == 'D' || c == 'E' || c == 'F' ||
+                                            c == 'a' || c == 'b' || c == 'c' || c == 'd' ||
+                                            c == 'e' || c == 'f') &&
+                                           "Invalid characters for hex literal");
+                                    hex_string[length++] = c;
+                                }
+
+                                result.string = source.substr(start_of_digit, read_cursor-start_of_digit);
+                                result.type = TOKEN_NUMBERINT;
+                                result.uvalue32 = interpret_hex_string(hex_string, length);
+                                return result;
+                            } break;
+                            case 'B':
+                            case 'b': { // parse binary
+                                _debugprintf("Reading binary literal!\n");
+                                next_character();
+                                char binary_string[64] = {};
+                                for (int i = 0; i < 64; ++i) binary_string[i] = '0';
+
+                                int length = 0;
+                                while (isdigit(peek_character())) {
+                                    char c = next_character();
+                                    assert((c == '0' || c == '1') && "Invalid characters for binary literal");
+                                    binary_string[length++] = c;
+                                }
+
+                                result.string = source.substr(start_of_digit, read_cursor-start_of_digit);
+                                result.type = TOKEN_NUMBERINT;
+                                result.uvalue32 = interpret_binary_string(binary_string, length);
+                                return result;
+                            } break;
+                            default: {
+                            } break;
+                        }
+                    }
+
+                    bool is_float = false;
+
 
                     bool found_one_dot = false;
                     while (((!finished()) &&

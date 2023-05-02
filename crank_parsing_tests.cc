@@ -8,6 +8,24 @@
 
 // I am expecting a boolean expression statement.
 void parse_statements() {
+    {
+        printf("SANITY TEST:\n");
+        char* test_parse =
+            R"(
+0b0110
+)";
+        Tokenizer_State tokenizer(test_parse);
+        assert(tokenizer.read_next().type == TOKEN_NUMBERINT && "Hmm, a binary literal should be a number.");
+    }
+    {
+        printf("SANITY TEST:\n");
+        char* test_parse =
+            R"(
+0x145FF
+)";
+        Tokenizer_State tokenizer(test_parse);
+        assert(tokenizer.read_next().type == TOKEN_NUMBERINT && "Hmm, a hex literal should be a number.");
+    }
     // this should be an empty statement
     {
         char* test_parse =
