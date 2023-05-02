@@ -251,7 +251,7 @@ Crank_Type* follow_typedef_chain(Crank_Type* type) {
     return cursor;
 }
 
-Crank_Type* is_type_numeric(Crank_Type* type) {
+bool is_type_numeric(Crank_Type* type) {
     type = follow_typedef_chain(type);
 
     switch (type->type) {
@@ -268,11 +268,11 @@ Crank_Type* is_type_numeric(Crank_Type* type) {
         case TYPE_FLOAT:
         case TYPE_DOUBLE:
         case TYPE_ENUMERATION:
-            return type;
+            return true;
         default: break;
     }
 
-    return nullptr;
+    return false;
 }
 
 // will return the "greater" of two types
