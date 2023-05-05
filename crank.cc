@@ -1122,6 +1122,10 @@ Crank_Type* get_expression_type(Crank_Expression* expression, bool strict=false)
 // maybe even strings? Concatenation is pretty well defined
 Crank_Expression* fold_constant_numeric_expression(Crank_Expression* expression);
 
+/*
+ * TODO: this needs to fold constant declarations or arrays
+ * which means I need constext in order to do stuff
+ */
 Crank_Expression* fold_constant_numeric_unary_expression(Crank_Expression* expression) {
     auto& unary = expression->unary;
     // unimplemented("fold_constant_numeric_unary_expression not implemented yet!");
@@ -1137,6 +1141,8 @@ Crank_Expression* fold_constant_numeric_unary_expression(Crank_Expression* expre
         if (is_type_integer(result->value.type)) {
             assert(!is_type_unsigned_integer(result->value.type) && "NOTE: negating an unsigned number is not defined?");
             result->value.int_value *= -1;
+        } else {
+            result->value.float_value *= -1;
         }
 
         return result;
@@ -1147,7 +1153,85 @@ Crank_Expression* fold_constant_numeric_unary_expression(Crank_Expression* expre
 
 Crank_Expression* fold_constant_numeric_binary_expression(Crank_Expression* expression) {
     auto& binary = expression->binary;
-    unimplemented("fold_constant_numeric_binary_expression not implemented yet! I require numeric_type_promotion!");
+    // implicit type conversion is A-OKAY.
+    auto final_expression_type = get_expression_type(expression, false);
+
+    auto lhs = fold_constant_numeric_expression(binary.first);
+    auto rhs = fold_constant_numeric_expression(binary.second);
+
+    /*
+     * to avoid a lot of if since the switch case is already a lot of
+     * code, I'll write both versions of the values and just write back at the end
+     */
+    int64_t integer_value = 0;
+    double double_value = 0;
+
+    int64_t operand_a_int = lhs->value.int_value;
+    int64_t operand_b_int = rhs->value.int_value;
+    double  operand_a_double = lhs->value.float_value;
+    double  operand_b_double = rhs->value.float_value;
+
+    switch (expression->operation) {
+        case OPERATOR_ADD: {
+            integer_value = operand_a_int + operand_b_int;
+            double_value = operand_a_double + operand_b_double;
+        } break;
+        case OPERATOR_SUB: {
+            integer_value = operand_a_int - operand_b_int;
+            double_value = operand_a_double - operand_b_double;
+        } break;
+        case OPERATOR_MUL: {
+            integer_value = operand_a_int * operand_b_int;
+            double_value = operand_a_double * operand_b_double;
+        } break;
+        case OPERATOR_DIV: {
+            integer_value = operand_a_int / operand_b_int;
+            double_value = operand_a_double / operand_b_double;
+        } break;
+        case OPERATOR_MOD: {
+            assert(is_type_integer(final_expression_type) && "modulo is undefined for floating points!");
+            integer_value = operand_a_int % operand_b_int;
+        } break;
+
+        case OPERATOR_NOT_EQUALITY:
+        case OPERATOR_EQUALITY:
+        case OPERATOR_LT:
+        case OPERATOR_GT:
+        case OPERATOR_LTE:
+        case OPERATOR_GTE:
+            unimplemented("unimplemented for now, since I need to check if the easy stuff works");
+            break;
+
+            // Fortunately these are not defined for doubles!
+        case OPERATOR_AND:
+        case OPERATOR_OR:
+        case OPERATOR_BITAND:
+        case OPERATOR_BITOR:
+        case OPERATOR_BITXOR:
+        case OPERATOR_BITNOT:
+            unimplemented("unimplemented for now, since I need to check if the easy stuff works");
+            break;
+    }
+
+    Crank_Expression* result = nullptr;
+
+    if (is_type_integer(final_expression_type)) {
+        result = new Crank_Expression;
+        result->type = EXPRESSION_VALUE;
+        result->value.value_type = VALUE_TYPE_LITERAL;
+        result->value.type = final_expression_type;
+
+        result->value.int_value = integer_value;
+    } else if (is_type_numeric(final_expression_type)) {
+        result = new Crank_Expression;
+        result->type = EXPRESSION_VALUE;
+        result->value.value_type = VALUE_TYPE_LITERAL;
+        result->value.type = final_expression_type;
+
+        result->value.float_value = double_value;
+    }
+
+    return result;
 }
 
 Crank_Expression* fold_constant_numeric_expression(Crank_Expression* expression) {
