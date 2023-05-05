@@ -402,7 +402,7 @@ protected:
                 if (type_expression->pointer_depth) {
                     for (int i = 0; i < type_expression->pointer_depth; ++i) {
                         // dereference automatically 
-                        fprintf(output, "*(");
+                        fprintf(output, "(*");
                     }
                     output_expression(current_module, output, expression->binary.first);
                     for (int i = 0; i < type_expression->pointer_depth; ++i) {
