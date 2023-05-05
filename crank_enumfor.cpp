@@ -49,10 +49,19 @@ A = 3,B = 4,C = 5,D = 10,E = 11,};;
 extern "C" {
 int  printf(char * fmt);}; // end extern "C" 
 
+struct ABC { // struct name
+int  a;
+int  b;
+int  c;
+};;
 int  crank_mainpoint_entry(int  argc, std::string  argv[]);
 int  crank_mainpoint_entry(int  argc, std::string  argv[])
 {
-printf("%c\n", "adf"[0]);printf("Here's an interesting for loop");{
+ABC  test = {
+1,2,3,}
+;
+;ABC * testptr = (&test);
+;printf("%c\n", "adf"[0]);printf("Here's an interesting for loop");{
 int  i = 3;
 ;int  j = 13;
 ;while (i<j) {

@@ -397,8 +397,27 @@ protected:
         // assume this is at root
         // this is for "invisible fields"
         if (expression->operation == OPERATOR_PROPERTY_ACCESS) {
-            if (!overrode_behavior)
+            if (!overrode_behavior) {
+                auto type_expression = get_expression_type(expression);
+                if (type_expression->pointer_depth) {
+                    for (int i = 0; i < type_expression->pointer_depth; ++i) {
+                        // dereference automatically 
+                        fprintf(output, "*(");
+                    }
+                    output_expression(current_module, output, expression->binary.first);
+                    for (int i = 0; i < type_expression->pointer_depth; ++i) {
+                        fprintf(output, ")");
+                    }
+                    fprintf(output, ".");
+                    output_expression(current_module, output, expression->binary.second);
+
+                    overrode_behavior = true;
+                }
+            }
+
+            if (!overrode_behavior) {
                 overrode_behavior |= try_and_emit_enum(current_module, output, expression);
+            }
         }
 
         if (!overrode_behavior) {

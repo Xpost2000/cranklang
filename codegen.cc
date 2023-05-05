@@ -203,7 +203,7 @@ protected:
             fprintf(output, "]");
         } else if (expression->operation == OPERATOR_PROPERTY_ACCESS) {
             output_expression(current_module, output, expression->binary.first);
-            fprintf(output, ".", Crank_Expression_Operator_string_table[expression->operation]);
+            fprintf(output, ".");
             output_expression(current_module, output, expression->binary.second);
         } else {
             output_expression(current_module, output, expression->binary.first);

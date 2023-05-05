@@ -85,7 +85,17 @@ printf: extern int(fmt: char*, ...);
 
 // test: const int = 5;
 
+typedef ABC: struct {
+        a: int;
+        b: int;
+        c: int;
+}
+
 main: int(argc: int, argv: strlit[]) {
+      test: ABC = ABC: {1,2,3};
+      testptr: ABC* = &test;
+      printf("%d, %d, %d\n", testptr.a, testptr.b, testptr.c);
+
       printf("%c\n", "adf"[0]);
       // to remove ambiguity.
       // NOTE: I don't have a lot of array behaviors right now
