@@ -277,6 +277,7 @@ bool is_type_numeric(Crank_Type* type) {
         case TYPE_UNSIGNEDINTEGER8: case TYPE_UNSIGNEDINTEGER16:
         case TYPE_UNSIGNEDINTEGER32: case TYPE_UNSIGNEDINTEGER64:
         case TYPE_FLOAT: case TYPE_DOUBLE:
+        case TYPE_ENUMERATION:
             return true;
         default: break;
     }
