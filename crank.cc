@@ -2149,10 +2149,6 @@ Error<Crank_Declaration> read_inline_declaration(Tokenizer_State& tokenizer) {
         assert(type->is_function);
         _debugprintf("This decl is a function!\n");
         auto function_statement = parse_any_statement(tokenizer);
-        assert(
-            function_statement->type != STATEMENT_DECLARATION ||
-            function_statement->type != STATEMENT_EXPRESSION
-        );
         if (function_statement) {
             _debugprintf("function declaration!\n");
             result.has_value = true;
@@ -2497,6 +2493,12 @@ Error<Crank_Module> load_module_from_source(std::string module_name, std::string
     return Error<Crank_Module>::okay(module);
 }
 
+// NOTE: I do not have multiple modules yet, and dependency order will be fascinating.
+// I might just allow "out of order" referencing IE: if a module requires another
+// it will immediately try to resolve the dependency module until that chain of dependencies is satisfied
+// the static analyser is a lot like the codegen, so we have different tree walkers basically.
+// I might have to duplicate code for this as a result if I want "using".
+// However I might just avoid that for now to make things simpler.
 struct Crank_Static_Analysis_Context {
     int current_module_index;
     std::vector<Crank_Module> modules;
@@ -2514,8 +2516,9 @@ struct Crank_Static_Analysis_Context {
         declarations.push_back(decl);
     }
 
-    void pop_declarations(int n) {
-        for (int i = 0; i < n; ++i) {
+    void reset_declarations_to(int old_size) {
+        int current_size = declarations.size();
+        for (int i = 0; i < current_size-old_size; ++i) {
             declarations.pop_back();
         }
     }
@@ -2526,7 +2529,7 @@ struct Crank_Static_Analysis_Context {
 // constants should already be evaluated since they are trivial
 // NOTE: requires context
 void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expression* expression) {
-    
+    if (!expression) return;
 }
 
 void resolve_statement_types(Crank_Static_Analysis_Context& context, Crank_Statement* statement) {
@@ -2536,11 +2539,14 @@ void resolve_statement_types(Crank_Static_Analysis_Context& context, Crank_State
         case STATEMENT_DECLARATION: {
             // add the declaration to context and continue on
             // but this is fine
+            context.add_declaration(statement->declaration_statement.declaration);
         } break;
         case STATEMENT_BLOCK: {
+            int size = context.declarations.size();
             for (auto& statement : statement->block_statement.body) {
                 resolve_statement_types(context, statement);
             }
+            context.reset_declarations_to(size);
         } break;
         case STATEMENT_IF: {
             resolve_expression_types(context, statement->if_statement.condition);
@@ -2548,14 +2554,18 @@ void resolve_statement_types(Crank_Static_Analysis_Context& context, Crank_State
             resolve_statement_types(context, statement->if_statement.false_branch);
         } break;
         case STATEMENT_FOR: {
-            for (auto& statement : statement->for_statement.initialization_statements) {
-                resolve_statement_types(context, statement);
+            int size = context.declarations.size();
+            {
+                for (auto& statement : statement->for_statement.initialization_statements) {
+                    resolve_statement_types(context, statement);
+                }
+                resolve_expression_types(context, statement->for_statement.condition);
+                for (auto& statement : statement->for_statement.postloop_statements) {
+                    resolve_statement_types(context, statement);
+                }
+                resolve_statement_types(context, statement->for_statement.body);
             }
-            resolve_expression_types(context, statement->for_statement.condition);
-            for (auto& statement : statement->for_statement.postloop_statements) {
-                resolve_statement_types(context, statement);
-            }
-            resolve_statement_types(context, statement->for_statement.body);
+            context.reset_declarations_to(size);
         } break;
         case STATEMENT_WHILE: {
             resolve_expression_types(context, statement->while_statement.condition);
@@ -2574,10 +2584,28 @@ void resolve_all_module_types(Crank_Static_Analysis_Context& context) {
     Crank_Module& module = context.current_module();
 
     for (auto& decl : module.decls) {
-        if (decl.decl_type == DECL_OBJECT && decl.object_type->is_function) {
-            resolve_statement_types(context, decl.expression->value.body);
+        if (decl.decl_type == DECL_OBJECT) {
+            if (decl.is_externally_defined) {
+                continue;
+            }
+
+            // NOTE: should correct the type in array size expressions
+
+
+            if (!decl.has_value) {
+                continue;
+            }
+
+            if (decl.is_function) {
+                resolve_statement_types(context, decl.expression->value.body);
+            } else {
+                resolve_expression_types(context, decl.expression);
+            }
         }
     }
+
+    // clear all declarations so new modules are unpolluted in the next stage.
+    context.declarations.clear();
 }
 
 void register_default_types() {
@@ -2642,6 +2670,7 @@ int main(int argc, char** argv){
     bool keep_cplusplus = false;
 
     Crank_Static_Analysis_Context context = {};
+    Crank_Codegen* generator = new CPlusPlusCodeGenerator();
     for (int i = 1; i < argc; ++i) {
         char* current_argument = argv[i];
 
@@ -2697,10 +2726,13 @@ int main(int argc, char** argv){
         }
     }
 
-    Crank_Codegen* generator = new CPlusPlusCodeGenerator();
     for (int i = 0; i < context.modules.size(); ++i) {
         context.current_module_index = i;
         resolve_all_module_types(context);
+
+        // after this stage I can allow for type inference.
+        // so I can do that
+
         // array sizes, enums, and constant expressions
         // fold_all_constants(context);
         generator->output_module(context.current_module());
