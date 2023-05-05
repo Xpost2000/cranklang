@@ -154,6 +154,14 @@ struct Token {
     };
 };
 
+// needed to output better errors
+// for types and stuff
+struct Code_Location_Info {
+    std::string file_name;
+    int column;
+    int line;
+};
+
 /*
   Dumb token spitter.
 */
