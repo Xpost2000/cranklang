@@ -2638,12 +2638,22 @@ void resolve_and_fold_all_constants(Crank_Static_Analysis_Context& context) {
                     // but I need this as a test case so I can other things
                     int start_from = 0;
                     for (auto& member : type->enum_members) {
-                        // TODO: does not know how to look up constant symbols yet
-                        // needs a static analysis context later.
-                        // that's okay, I can do that tomorrow
-                        assert(is_constant_expression(member.expression) &&
-                               is_expression_numeric(member.expression) &&
-                        "Cannot evaluate enum member values!");
+                        if (member.expression) {
+                            // TODO: does not know how to look up constant symbols yet
+                            // needs a static analysis context later.
+                            // that's okay, I can do that tomorrow
+                            assert(is_constant_expression(member.expression) &&
+                                   is_expression_numeric(member.expression) &&
+                                   "Cannot evaluate enum member values!");
+
+                            Crank_Expression* value = fold_constant_numeric_expression(member.expression);
+                            assert(value->type == EXPRESSION_VALUE && "Constant folding should only produce value expressions!");
+                            assert(is_type_integer(get_expression_type(value)) && "Enums should only be integers!");
+                            member.value = start_from = value->value.int_value;
+                            start_from++;
+                        } else {
+                            member.value = start_from++;
+                        }
                     }
                 } else {
                     // irrelevant for now.
