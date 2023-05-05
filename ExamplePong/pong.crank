@@ -155,7 +155,7 @@ typedef PaddleSide : enum u8 {
 };
 
 typedef Paddle: struct {
-    // side: PaddleSide; check this later
+    //side: PaddleSide;
     side: PaddleSide = PaddleSide.Left;
 
     x: int = 0;

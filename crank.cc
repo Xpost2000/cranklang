@@ -120,8 +120,8 @@ enum Crank_Object_Literal_Decl_Type {
 struct Crank_Statement;
 struct Crank_Expression;
 struct Crank_Value {
-    int value_type; // This is just the obligatory "parse" information
-    Crank_Type* type; // This is the actual discriminator for the value type.
+    int value_type = 0; // This is just the obligatory "parse" information
+    Crank_Type* type = nullptr; // This is the actual discriminator for the value type.
 
     // TODO:
     // used for literals only. Type for symbol references,
@@ -1437,9 +1437,9 @@ const char* Crank_Statement_Type_string_table[] = {
 };
 
 struct Crank_Statement_If {
-    Crank_Expression* condition;
-    Crank_Statement* true_branch;
-    Crank_Statement* false_branch;
+    Crank_Expression* condition = nullptr;
+    Crank_Statement* true_branch = nullptr;
+    Crank_Statement* false_branch = nullptr;
 };
 
 /*
@@ -1451,9 +1451,9 @@ struct Crank_Statement_If {
   Which is not legal in a normal for loop)
  */
 struct Crank_Statement_For {
-    std::vector<Crank_Statement*> initialization_statements;
+    std::vector<Crank_Statement*> initialization_statements = {};
     Crank_Expression* condition = nullptr;
-    std::vector<Crank_Statement*> postloop_statements;
+    std::vector<Crank_Statement*> postloop_statements = {};
     Crank_Statement* body = nullptr;
 };
 
@@ -1475,7 +1475,7 @@ struct Crank_Statement_Declaration {
 };
 
 struct Crank_Statement_Block {
-    std::vector<Crank_Statement*> body;
+    std::vector<Crank_Statement*> body = {};
 };
 
 struct Crank_Statement {
@@ -1487,13 +1487,13 @@ struct Crank_Statement {
     // in order to allow union types...
     //
     // Since std::vector is not trivially constructable
-    Crank_Statement_If          if_statement;
-    Crank_Statement_While       while_statement;
-    Crank_Statement_For         for_statement;
-    Crank_Statement_Return      return_statement;
-    Crank_Statement_Expression  expression_statement;
-    Crank_Statement_Declaration declaration_statement;
-    Crank_Statement_Block       block_statement; // or a compound statement
+    Crank_Statement_If          if_statement = {};
+    Crank_Statement_While       while_statement = {};
+    Crank_Statement_For         for_statement = {};
+    Crank_Statement_Return      return_statement = {};
+    Crank_Statement_Expression  expression_statement = {};
+    Crank_Statement_Declaration declaration_statement = {};
+    Crank_Statement_Block       block_statement = {}; // or a compound statement
 };
 
 Crank_Statement* parse_any_statement(Tokenizer_State& tokenizer);
