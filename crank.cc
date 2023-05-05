@@ -1487,13 +1487,13 @@ struct Crank_Statement {
     // in order to allow union types...
     //
     // Since std::vector is not trivially constructable
-    Crank_Statement_If          if_statement = {};
-    Crank_Statement_While       while_statement = {};
-    Crank_Statement_For         for_statement = {};
-    Crank_Statement_Return      return_statement = {};
-    Crank_Statement_Expression  expression_statement = {};
-    Crank_Statement_Declaration declaration_statement = {};
-    Crank_Statement_Block       block_statement = {}; // or a compound statement
+    Crank_Statement_If          if_statement;
+    Crank_Statement_While       while_statement;
+    Crank_Statement_For         for_statement;
+    Crank_Statement_Return      return_statement;
+    Crank_Statement_Expression  expression_statement;
+    Crank_Statement_Declaration declaration_statement;
+    Crank_Statement_Block       block_statement; // or a compound statement
 };
 
 Crank_Statement* parse_any_statement(Tokenizer_State& tokenizer);
