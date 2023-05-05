@@ -1,70 +1,100 @@
 # CrankLang
 
-**NOTE: Crank now supports constant folding!**
+A simple alternative C language that transpiles.
 
-**NOTE: Crank is now featureful enough to have a simple FFI spec, and other than typedefs from the standard library**
-**the language only requires the existence of a C compiler. I still rely on std::vector for dynamic arrays but now the language is less "magic"**
+**With no formal compiler education, I jump into writing a compiler, which turns out reasonably well all things considered.**
 
-**NOTE: most of this is actually just a "TODO list" right now, although at the moment a subset of
-the language features compile.**
+The codebase is kind of ugly as it evolves slightly, but it's reasonably okay to refactor compared to Legends anyways.
 
-**NOTE: One fun target goal, is to get this to be "self-hosting". While I still depend on a C compiler since I'm
-not going to pull in LLVM and writing my own native codegen is kind of painful, I'll consider being able to rewrite the compiler
-in Crank to be a cool goal :)**
+## Feature List Summary
+Crank is technically useful enough to write programs now, and really just lacks a way to
+use multiple modules primarily.
+    
+- Handmade statically typed language that compiles to C++.
+- Handmade recursive descent parser
+- Expression parsing and correct operator precedence order.
+- *A simple FFI which allows you to use C functions*
+- Out of order function declaration
+- Record types such as unions and structs
+- Scoped enums.
+- For loops, if statements, while loops
+- Binary and hexadecimal literals for easily writing flags.
+- Dynamic arrays
+- Object literals (and designated struct initializers)
+- **Automatic pointer dereferencing!**
 
-This is a basic alternate C-syntax sort of language. It's an exercise in writing parsers and figuring
-out how to write compilers. So the language is effective a C+=0.5. It's effectively still C, but with some
-extra features.
+## Wishlist/Later
+- Multiple modules
+- (maybe) anonymous functions
+- RTTI?
+- Array programming
+- Bootstrapping/Self-hosting
 
-The language parses everything and should be typechecking so a C code generator isn't exactly a copout!
+## Technial Description
 
-I don't really advise using this because it's a toy language but at least you
-can keep the C++ code it compiles if something really goes south.
+This is my own personal compiler educational project for the intent of
+properly exercising my parsing muscles, because all I've written were
+lisp interpreters. It's effectively a BetterC, and aims to just extend
+a little on top of C.  The primary target is to have an extremely
+simple to parse language that has incredibly consistent syntax. The
+only implementation currently transpiles into C++, however the
+compiler does do all the heavy lifting of typechecking and other
+obligatory static analysis.
 
-It's a project mostly for me to learn how to make a programming language, and
-properly document a project because most of my other stuff is more off the cuff.
+Crank is sort of a drop-in C replacement, and should be easy to
+migrate to once you get used to do the changes to the syntax style
+which are meant to be as ambiguous as possible.
 
-It supports most of the common features that make a language
-usable, and additional features it implements on top of the
-C-language include:
+**This is a toy language, so please don't try to actually use this.**
 
-- Module System
-- Anonymous Functions
-- Arrays as proper types
-- Array Programming (first class array objects) (all component wise operations.)
+## Development / Compiling
 
-The language is designed to transpile relatively easily to C, and may include an interpreter. As I'm thinking carefully
-of how to do a handrolled x86_64 ffi, however anything related to structs is causing me to draw blanks as I have to pack
-records into C structs and unpack them from C structs as well... I may not include it for a while (or ever, it kind of depends on how
-worth it I think is to do it.)
+Like all of my projects, I use an almost Unity build setup. There's a makefile that you use
+to compile the project this time. It's not anything special, all you do is run make.
 
-The base implementation of the transpiler is in C++. It is not implemented in the most efficient
-way. Rather it was implemented in a way that I believe to be simple to read, and otherwise not too difficult
-to modify.
+There are no dependencies other than a working C++ 11 compiler.
 
-## Transpiler Notes
+## Example programs
 
-The C++ dialect it compiles in will be C-ish style C++ because the language
-features are oriented around that.
+In the repository there are a few sample programs. Some of them are implementation of classic
+games. Likely Pong and Space Invaders, since the programming language is the main project. Not the
+games.
 
-Also since C++ doesn't support some of the language features, some traces of the
-original Crank code will disappear afterwards (for instance the module system only exists
-during the compilation stage).
+The games will require additional dependencies such as raylib or SDL2.
 
-When compiling to C++ the language will produce code that requires the existance of a runtime spec,
-which is implemented in C.
+## Usage
 
-## Examples 
+```
+crank --dotests
+```
+Runs some basic litmus tests on the type system and lexical analyzer.
 
-There are a few program examples included in this repository which are:
+```
+crank --help
+```
+Will print out a help message. If I had one.
 
-- Hello World
-- Star Stairs
-- The Game Of Life
+```
+crank --output
+```
+Sets the name of the output file
 
-# Build/Run/Install
+```
+crank --keepcpp
+```
+This is mainly a debug option, but it allows you to keep the compiled C++ code.
 
-There is an included makefile and as long as you have any sufficient C++ compiler this should
-build fine.
+```
+crank --link
+```
+Passes a library to link to the C++ compiler
 
-GCC is used for the releases.
+```
+crank --libdir
+```
+Passes a linking directory to the C++ compiler
+
+### Example of proper usage
+```
+crank --output game --link SDL2 --libdir where_sdl2_is/ game.crank
+```

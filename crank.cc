@@ -2698,11 +2698,13 @@ int main(int argc, char** argv){
 
     std::vector<std::string> module_names;
     std::vector<std::string> linkage_lib_names;
+    std::vector<std::string> linkage_path_names;
     std::string output_name = "a";
     bool keep_cplusplus = false;
 
     Crank_Static_Analysis_Context context = {};
     Crank_Codegen* generator = new CPlusPlusCodeGenerator();
+
     for (int i = 1; i < argc; ++i) {
         char* current_argument = argv[i];
 
@@ -2723,6 +2725,9 @@ int main(int argc, char** argv){
                     output_name = std::string(output);
                 } else if (strcmp(arg_string, "keepcpp") == 0) {
                     keep_cplusplus = true;
+                } else if (strcmp(arg_string, "libdir") == 0) {
+                    char* link_path = argv[++i];
+                    linkage_path_names.push_back(std::string(link_path));
                 }
             }
         } else {
@@ -2778,6 +2783,9 @@ int main(int argc, char** argv){
         compile_string += " -o " + output_name + " ";
         for (auto s : module_names) {
             compile_string += s + " ";
+        }
+        for (auto l : linkage_path_names) {
+            compile_string += " -L" + l + " ";
         }
         for (auto l : linkage_lib_names) {
             compile_string += " -l" + l + " ";

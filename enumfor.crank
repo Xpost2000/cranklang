@@ -101,7 +101,7 @@ main: int(argc: int, argv: strlit[]) {
       // NOTE: I don't have a lot of array behaviors right now
       // so I might have to think of something...
 
-      // printf("%d, %d, %d\n", Numbers.NegativeFive, Numbers.One, Numbers.Two);
+      printf("%d, %d, %d\n", Numbers.NegativeFive, Numbers.One, Numbers.Two);
 
 
       // The for loop is a little more "powerful"
