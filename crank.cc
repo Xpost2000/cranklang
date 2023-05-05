@@ -2,7 +2,10 @@
   A small programming language transpiler. It's not really efficient
   it's just to figure out how to write a language by any means
   necessary. So there's an allocation festival thanks to all the
-  std::string I use.
+  std::string I use, and a lot of structs are pretty fat for simplicity.
+
+  I've certainly learned a lot more than I expected too especially since outside
+  of the parsing, this is basically me just trying to do whatever I think is sensible.
 
   NOTE: I'm not deleting anything here because
   the OS will reclaim all memory, and it's only running until
