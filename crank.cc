@@ -2500,7 +2500,14 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
                 // (property-access a (array-access b 0))
                 // so it's not as trivial but it's not too big of a deal
                 // TODO: investigate later. This is a weird issue but it's not a deal breaker.
-                assert(expression->binary.second->value.value_type == VALUE_TYPE_SYMBOL && "Property accesses can only be done on literals!");
+
+                // to handle the property access case I will reach the "leaf" of the right expression;
+                auto leaf_node = expression->binary.second;
+                while (leaf_node && leaf_node->type == EXPRESSION_BINARY) {
+                    assert(leaf_node->operation == OPERATOR_ARRAY_INDEX && "This should be the only case I see.");
+                    leaf_node = leaf_node->binary.first;
+                }
+                assert(leaf_node->value.value_type == VALUE_TYPE_SYMBOL && "Property accesses can only be done on literals!");
                 // resolve the special case
 
                 auto type_of_lhs = follow_typedef_chain(get_expression_type(expression->binary.first));
@@ -2509,20 +2516,21 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
                        type_of_lhs->type == TYPE_ENUMERATION && "These are the only types with members");
 
                 bool resolved = false;
+
                 // this weird separation is deliberate because enums have all members with the same type
                 // every other thing does not
                 if (type_of_lhs->type == TYPE_ENUMERATION) {
                     for (auto& member : type_of_lhs->enum_members) {
-                        if (member.name == expression->binary.second->value.symbol_name) {
-                            expression->binary.second->value.type = get_base_type(type_of_lhs);
+                        if (member.name == leaf_node->value.symbol_name) {
+                            leaf_node->value.type = get_base_type(type_of_lhs);
                             resolved = true;
                             break;
                         }
                     }
                 } else {
                     for (auto& member : type_of_lhs->members) {
-                        if (member.name == expression->binary.second->value.symbol_name) {
-                            expression->binary.second->value.type = member.object_type;
+                        if (member.name == leaf_node->value.symbol_name) {
+                            leaf_node->value.type = member.object_type;
                             resolved = true;
                             break;
                         }

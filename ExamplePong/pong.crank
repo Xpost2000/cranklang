@@ -179,7 +179,7 @@ typedef GameState: struct {
 main: int(argc: int, argv: strlit[]) {
       game_state: GameState;
 
-      (game_state.scores)[0] = 0;
+      game_state.scores[0] = 0;
       (game_state.scores)[1] = 0;
 
       InitWindow(1024, 768, "Hello Cranky Pong!");
