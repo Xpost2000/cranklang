@@ -2542,8 +2542,8 @@ void resolve_statement_types(Crank_Static_Analysis_Context& context, Crank_State
 
     switch (statement->type) { // since I allow any statement to be a body
         case STATEMENT_DECLARATION: {
-            // add the declaration to context and continue on
-            // but this is fine
+            auto& decl = (statement->declaration_statement.declaration);
+            resolve_expression_types(context, decl->expression);
             context.add_declaration(statement->declaration_statement.declaration);
         } break;
         case STATEMENT_BLOCK: {
@@ -2605,6 +2605,15 @@ void resolve_all_module_types(Crank_Static_Analysis_Context& context) {
                 resolve_statement_types(context, decl.expression->value.body);
             } else {
                 resolve_expression_types(context, decl.expression);
+            }
+        } else {
+            // typedef
+            if ((decl.object_type->type == TYPE_RECORD || decl.object_type->type == TYPE_UNION)) {
+                _debugprintf("Resolving struct members type");
+                // resolve inner types
+                for (auto& member : decl.object_type->members) {
+                    resolve_expression_types(context, member.expression);
+                }
             }
         }
     }
