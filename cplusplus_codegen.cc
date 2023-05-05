@@ -418,12 +418,10 @@ private:
     bool try_and_emit_enum(Crank_Module& current_module, FILE* output, Crank_Expression* expression) {
         auto& first = expression->binary.first;
         // wish I had some helpers.
-        if (first->type == EXPRESSION_VALUE &&
-            first->value.value_type == VALUE_TYPE_SYMBOL) {
+        if (first->type == EXPRESSION_VALUE && first->value.value_type == VALUE_TYPE_SYMBOL) {
             auto& symbol_name = first->value.symbol_name;
-            auto enum_type    = crank_type_system_find_enum_decl((char*)symbol_name.c_str());
-
-            if (enum_type) {
+            auto enum_type    = lookup_type((char*)symbol_name.c_str());
+            if (enum_type && enum_type->type == TYPE_ENUMERATION) {
                 _debugprintf("Property access on enum. Hijacking output to produce scoped access");
                 auto& second = expression->binary.second;
 

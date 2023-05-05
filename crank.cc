@@ -512,28 +512,6 @@ Crank_Declaration* crank_module_find_function_decl(Crank_Module& module, char* f
     return nullptr;
 }
 
-// Looking up some base types
-/*
- * Unions and records are similar in codegen other than memory storage.
- * So you can search for them using the same procedure, since other than practical
- * usage they work identically.
- */
-Crank_Type* crank_type_system_find_record_or_union_decl(char* type_name) {
-    auto ptr = lookup_type(type_name);
-    if (ptr->type == TYPE_RECORD || ptr->type == TYPE_UNION)
-        return ptr;
-
-    return nullptr;
-} 
-
-Crank_Type* crank_type_system_find_enum_decl(char* type_name) {
-    auto ptr = lookup_type(type_name);
-    if (ptr->type == TYPE_ENUMERATION)
-        return ptr;
-
-    return nullptr;
-}
-
 // This is basically just the param list for lookup_type.
 // so I should just refactor this out later.
 struct Crank_Type_Declaration { // NOTE: for semantic analysis. Not doing type system things here!
