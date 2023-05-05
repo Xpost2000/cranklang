@@ -2501,33 +2501,55 @@ Error<Crank_Module> load_module_from_source(std::string module_name, std::string
 // inside of expressions to make sure that AST is "complete".
 // constants should already be evaluated since they are trivial
 // NOTE: requires context
-void resolve_statement_variable_types(Crank_Statement* statement) {
-    switch (function_body->type) { // since I allow any statement to be a body
+void resolve_expression_types(Crank_Expression* expression) {
+    
+}
+
+void resolve_statement_types(Crank_Statement* statement) {
+    if (!statement) return;
+
+    switch (statement->type) { // since I allow any statement to be a body
+        case STATEMENT_DECLARATION: {
+            // add the declaration to context and continue on
+            // but this is fine
+        } break;
         case STATEMENT_BLOCK: {
-            
+            for (auto& statement : statement->block_statement.body) {
+                resolve_statement_types(statement);
+            }
         } break;
         case STATEMENT_IF: {
-            
+            resolve_expression_types(statement->if_statement.condition);
+            resolve_statement_types(statement->if_statement.true_branch);
+            resolve_statement_types(statement->if_statement.false_branch);
         } break;
         case STATEMENT_FOR: {
-            
+            for (auto& statement : statement->for_statement.initialization_statements) {
+                resolve_statement_types(statement);
+            }
+            resolve_expression_types(statement->for_statement.condition);
+            for (auto& statement : statement->for_statement.postloop_statements) {
+                resolve_statement_types(statement);
+            }
+            resolve_statement_types(statement->for_statement.body);
         } break;
         case STATEMENT_WHILE: {
-            
+            resolve_expression_types(statement->while_statement.condition);
+            resolve_statement_types(statement->while_statement.action);
         } break;
         case STATEMENT_RETURN: {
-            
+            resolve_expression_types(statement->return_statement.result);
         } break;
         case STATEMENT_EXPRESSION: {
-            
+            resolve_expression_types(statement->expression_statement.expression);
         } break;
     }
 }
 
-void resolve_all_module_types() {
-    for (auto& decl : decls) {
+void resolve_all_module_types(Crank_Module& module) {
+    for (auto& decl : module.decls) {
         if (decl.decl_type == DECL_OBJECT && decl.object_type->is_function) {
-            resolve_function_statement_types(decl.expression->value.body);
+            resolve_statement_types(decl.expression->value.body);
         }
     }
 }
