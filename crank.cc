@@ -103,16 +103,6 @@ enum Crank_Types {
 struct Crank_Type;
 struct Crank_Object_Literal;
 
-struct Crank_Object_Decl_Base {
-    Crank_Type* object_type;
-
-    //... hmm when do I use this?
-    std::vector<int> array_dimensions; // empty is not an array. -1 means don't care. might be flexible.
-
-    std::string name;
-    bool has_value;
-};
-
 enum Crank_Value_Type {
     VALUE_TYPE_LITERAL, // Object literal... Number, String literal, Array Literal?
     VALUE_TYPE_SYMBOL,  // Symbol name to look up. Hopefully the right type.
@@ -180,17 +170,17 @@ struct Crank_External_Information {
     std::string linkage_name = "";
 };
 
-struct Crank_Declaration : public Crank_Object_Decl_Base {
+struct Crank_Declaration {
     int decl_type;
+    Crank_Type* object_type;
     bool is_externally_defined = false; // any declaration followed by extern
     Crank_External_Information extern_definition;
-    // int export; // TODO: module system!
-    /*
-      Will be created if it's a DECL_TYPE, based off parsing.
-      (or if it's a typedef it'll just match.)
 
-      Otherwise it's just the type of the object.
-    */
+    //... hmm when do I use this?
+    std::vector<int> array_dimensions; // empty is not an array. -1 means don't care. might be flexible.
+
+    std::string name;
+    bool has_value;
 
     // Used only for DECL_OBJECT
     Crank_Expression* expression = nullptr;
@@ -2660,6 +2650,17 @@ void resolve_all_module_types(Crank_Static_Analysis_Context& context) {
 
 void resolve_and_fold_all_constants(Crank_Static_Analysis_Context& context) {
     Crank_Module& module = context.current_module();
+    // for now we only operate once per module, and do not reference other modules for now...
+    // let's figure out multiple modules when the time comes
+    { 
+        // only enums have constants to fold for now.
+        // I don't care about optimizing expressions right now
+        for (auto& decl : module.declarations) {
+            if (decl.decl_type == DECL_TYPE) {
+                
+            }
+        }
+    }
 }
 
 void register_default_types() {
