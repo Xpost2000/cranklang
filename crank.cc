@@ -20,12 +20,6 @@
   There's too much copying that I'm not super comfortable with,
   but that's part of the clean up code.
 
-  NOTE: A lot of thing in the "compiler" are not
-  typechecked as of now! I am checking these functional changes
-  in but invalid types are still allowed
-  - Function decls will definitely not be typechecked yet
-  - Expressions are not properly type checked!
-
   NOTE: have to refactor like all of this later...
   because it's not object oriented in the traditional sense.
 
@@ -33,9 +27,6 @@
 
   I'll try to clean it up and at the very least have some decent error
   propagation / reporting.
-  
-  NOTE: in transpiler mode, I don't have to evaluate the expressions... I just need
-  to make sure they evaluate to the right type.
 
   Most of this code is "backend"/"compiler" logic. 
 
@@ -162,9 +153,6 @@ struct Crank_Value {
     std::vector<Crank_Expression*> call_parameters = {};
     Crank_Statement* body = nullptr;
 
-    // TODO: add list of statements.
-    // functions are theoretically values in Crank.
-
     // look up symbol name for values.
     std::string symbol_name;
 };
@@ -218,7 +206,7 @@ struct Crank_Enum_KeyValue {
     std::string name;
     Crank_Expression* expression = nullptr;
 
-    // this is filled in on a folding constants pass.
+    // this is filled in on a separate folding constants pass.
     int value;
 };
 
@@ -252,10 +240,6 @@ struct Crank_Type {
     // NOTE: non-structs can have members. But it'll be "built-ins". Probably.
     std::vector<Crank_Declaration> members;
 };
-
-// TODO:
-// - Check array dimension matching
-// - Check function matching!
 
 Crank_Type* enumeration_get_underlying_type(Crank_Type* type) {
     if (type->type == TYPE_ENUMERATION) {
@@ -350,10 +334,6 @@ bool is_type_unsigned_integer(Crank_Type* type) {
 // Typecasting or promotion or implicit conversion is handled else where.
 bool crank_type_match(Crank_Type* a, Crank_Type* b) {
 
-    // Since I intern Crank_Types this is always okay.
-    _debugprintf("Crank_Type a (%p) (name: %s array_dim(n=%d))\n", a, a->name.c_str(), a->rename_of, a->array_dimensions.size());
-    _debugprintf("Crank_Type b (%p) (name: %s array_dim(n=%d))\n", b, b->name.c_str(), b->rename_of, b->array_dimensions.size());
-
     // NOTE: enums and such should be considered distinct types
     a = follow_typedef_chain(a);
     b = follow_typedef_chain(b);
@@ -366,7 +346,7 @@ bool crank_type_match(Crank_Type* a, Crank_Type* b) {
 }
 
 // globally registered types
-// TODO: make this per module. I'm just doing this to make resolution easy until I figure out what I'm doing.
+// TODO: make this per module. (or a way to distinguish between modules) I'm just doing this to make resolution easy until I figure out what I'm doing.
 std::vector<Crank_Type*> global_type_table; // too many allocations, but I don't want to deal with pointer fix up right now.
 
 Crank_Type* register_new_type(
@@ -389,12 +369,6 @@ Crank_Type* register_new_type(
     result->pointer_depth = pointer_depth;
     return result;
 }
-
-// TODO: Function type checking
-/*
-  NOTE: How do I consider pointers vs arrays... That'll be something
-  to look forward to I guess.
-*/
 
 /*
  * NOTE: if looking up a function type or array type, it will
@@ -1345,8 +1319,6 @@ Crank_Expression* parse_property_accessor(Tokenizer_State& tokenizer) {
     auto base_accessor = parse_array_index(tokenizer);
 
     if (tokenizer.peek_next().type == TOKEN_DOT) {
-        // accessor!
-        // this will just be recursive.
         tokenizer.read_next(); // skip dot
         return binary_expression(base_accessor, parse_property_accessor(tokenizer), OPERATOR_PROPERTY_ACCESS);
     }
@@ -1376,7 +1348,6 @@ Crank_Expression* parse_unary(Tokenizer_State& tokenizer) {
 
         assert(operation != -1 && "something went wrong here.");
         return unary_expression(parse_property_accessor(tokenizer), operation);
-        // return unary_expression(parse_array_index(tokenizer), operation);
     }
 
     return parse_property_accessor(tokenizer);
@@ -1391,7 +1362,6 @@ Crank_Expression* parse_factor(Tokenizer_State& tokenizer) {
         tokenizer.peek_next().type == TOKEN_MOD   ||
         tokenizer.peek_next().type == TOKEN_AND   ||
         tokenizer.peek_next().type == TOKEN_BITAND ||
-        // TODO: I don't think this respects C operator order
         tokenizer.peek_next().type == TOKEN_BITXOR
     ) {
         auto operator_token = tokenizer.read_next();
@@ -1510,19 +1480,6 @@ const char* Crank_Statement_Type_string_table[] = {
     // when I add them of course.
     [STATEMENT_CONTINUE]      = "continue-statement",
     [STATEMENT_BREAK]      = "break-statement",
-};
-
-// This allows fall through.
-// NOTE: 
-//  this should compile into a normal switch statement when possible
-//  **IF AND ONLY IF**: I determine that the entire statement has
-//  **CONSTANT** clauses.
-//
-// Otherwise it will compile as a chain of if_else with ors to simulate
-// fall through.
-struct Crank_Statement_Switch {
-    Crank_Expression* condition;
-    // std::vector<Case> terms;
 };
 
 struct Crank_Statement_If {
@@ -1900,17 +1857,7 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
             if (next.type == TOKEN_COLON) {
                 _debugprintf("Presuming this to be an object literal\n");
                 // object literal
-                /*
-                 * NOTE: just keep it like this to be simple, so it's kinda like Go.
-                 * Don't need a fancy parser. Need a working language.
-                 *
-                 * This isn't like C++ with initializers. Only for objects.
-                 *
-                 * NOTE: should move this to a separate procedure to reduce the size of this part
-                 */
                 tokenizer.read_next();
-                // I don't have the ternary operator in this language so it's okay
-                // to use that syntax
                 assert(tokenizer.read_next().type == TOKEN_LEFT_CURLY_BRACE && "A struct literal looks like structname: {initializer}");
                 value.value_type = VALUE_TYPE_LITERAL;
                 value.type = lookup_type(first.string);
@@ -2002,14 +1949,7 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
                         tokenizer.read_next(); 
 
                         value.is_function_call = true;
-                        // NOTE: Ah I see. types are not looked up yet!
-                        // to allow out of order declaration
-                        // crank types have to patch themselves up!
-                        // IE: type is probably null here.
-                        // we need to look up declarations for a function definition
-                        // NOTE:
-                        // so add this to a list of "to resolve", and when I find a function
-                        // see if we can resolve the function.
+
                         while (tokenizer.peek_next().type != TOKEN_RIGHT_PARENTHESIS) {
                             auto new_value = parse_expression(tokenizer);
                             assert(new_value && "Bad function param passing");
@@ -2427,10 +2367,8 @@ Error<Crank_Module> load_module_from_source(std::string module_name, std::string
             } break;
             case TOKEN_NONE: {
                 tokenizer.read_next();
-                // safe, is EOF
             } break;
             case TOKEN_SEMICOLON: {
-                // harmless
                 tokenizer.read_next();
             } break;
             default: {
@@ -2569,6 +2507,8 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
                         printf("\n");
                         resolve_expression_types(context, call_param);
                     }
+
+                    // TODO: typecheck against official definition
                 }
 
                 // better error message / no assertion
@@ -2756,11 +2696,6 @@ void delete_file(const char* where) {
 int main(int argc, char** argv){
     register_default_types();
 
-    // TODO: actual command line arguments.
-#if 0
-    // NOTE: should run as a test argument only
-    run_all_tests();
-#else
     std::vector<std::string> module_names;
     std::vector<std::string> linkage_lib_names;
     std::string output_name = "a";
@@ -2861,5 +2796,4 @@ int main(int argc, char** argv){
     }
 
     return 0;
-#endif
 }
