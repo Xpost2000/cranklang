@@ -37,15 +37,15 @@ typedef int8_t  i8;
 
 typedef u32 uint;
 enum class LightSignal : s32 { // enum name
-RED = 0,BLUE = 1,GREEN = 2,};;
+RED = -1491080224,BLUE = -1491080224,GREEN = -1491080224,};;
 enum class TestFlagBinary : u64 { // enum name
-a = 0,b = 1,c = 2,d = 3,e = 4,};;
+a = -1491080224,b = -1491080224,c = -1491080224,d = -1491080224,e = -1491080224,};;
 enum class TestFlagHex : u64 { // enum name
-a = 0,b = 1,c = 2,d = 3,e = 4,f = 5,g = 6,h = 7,i = 8,j = 9,k = 10,l = 11,m = 12,n = 13,o = 14,p = 15,q = 16,r = 17,s = 18,t = 255,};;
+a = -1491080224,b = -1491080224,c = -1491080224,d = -1491080224,e = -1491080224,f = -1491080224,g = -1491080224,h = -1491080224,i = -1491080224,j = -1491080224,k = -1491080224,l = -1491080224,m = -1491080224,n = -1491080224,o = -1491080224,p = -1491080224,q = -1491080224,r = -1491080224,s = -1491080224,t = -1491080224,};;
 enum class Numbers : s8 { // enum name
-NegativeFive = -5,NegativeFour = -4,NegativeThree = -3,NegativeTwo = -2,NegativeOne = -1,Zero = 0,One = 1,Two = 2,Three = 3,Four = 4,Five = 5,};;
+NegativeFive = -1491080224,NegativeFour = -1491080224,NegativeThree = -1491080224,NegativeTwo = -1491080224,NegativeOne = -1491080224,Zero = -1491080224,One = -1491080224,Two = -1491080224,Three = -1491080224,Four = -1491080224,Five = -1491080224,};;
 enum class numbers2 : s8 { // enum name
-A = 3,B = 4,C = 5,D = 10,E = 11,};;
+A = -1491080224,B = -1491080224,C = -1491080224,D = -1491080224,E = -1491080224,};;
 extern "C" {
 int  printf(char * fmt);}; // end extern "C" 
 

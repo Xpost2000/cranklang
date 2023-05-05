@@ -216,7 +216,10 @@ Crank_Declaration make_uninitialized_object_decl(Crank_Type* type, std::string n
 
 struct Crank_Enum_KeyValue {
     std::string name;
-    int64_t value;
+    Crank_Expression* expression = nullptr;
+
+    // this is filled in on a folding constants pass.
+    int value;
 };
 
 struct Crank_Type {
@@ -2254,43 +2257,13 @@ bool read_enum_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
     assert(type->type == TYPE_ENUMERATION && "?");
     _debugprintf("Trying to read decl\n");
 
-    int64_t start_counting_from = 0; // for counting values
-
-    while (tokenizer.peek_next().type == TOKEN_SYMBOL) { // I don't think I need to check this anymore b/c read_inline_declaration returns error but okay
-        // NOTE: I should allow inner anonymous structs and unions.
-        // not variants though. Those are a special case?
+    while (tokenizer.peek_next().type == TOKEN_SYMBOL) {
         auto value_name = tokenizer.read_next();
 
-        int64_t current_value = start_counting_from++;
+        Crank_Expression* enum_expression = nullptr;
         if (tokenizer.peek_next().type == TOKEN_EQUAL) {
             tokenizer.read_next();
-            // Sorry! no expression evaluation here!
-            // unless I figure out how to determine if expressions are constant!
-
-            // found value
-            auto new_value = parse_expression(tokenizer);
-            _debugprintf("Do I have an expression: %p", new_value);
-            // NOTE: I need to assert it is an integer.
-            // NOTE: this will have undefined behavior if I can't determine it is
-            // going to be an int;
-            assert(new_value && "I should have an expression.");
-            assert(is_expression_numeric(new_value) && "enum value should be a numeric expression!");
-            assert(is_constant_expression(new_value) && "enum value should be a constant expression!");
-            new_value = fold_constant_numeric_expression(new_value);
-
-            // NOTE: have to handle case where we get a binary expression that is
-            // actually an enum
-            // because I have to lookup the enum and use the literal value.
-            
-            if (new_value->type == EXPRESSION_VALUE) {
-                // definitely need a helper to get stuff working
-                current_value = start_counting_from = new_value->value.int_value;
-            } else {
-                assert(new_value->type == EXPRESSION_BINARY && "This should be a property access, but firstly that must be binary!"); 
-            }
-            start_counting_from++;
-        } else {
-            // nothing
+            enum_expression = parse_expression(tokenizer);
         }
 
         assert(tokenizer.peek_next().type == TOKEN_SEMICOLON || tokenizer.peek_next().type == TOKEN_COMMA);
@@ -2298,7 +2271,7 @@ bool read_enum_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
         {
             Crank_Enum_KeyValue kv;
             kv.name = value_name.string;
-            kv.value = current_value;
+            kv.expression = enum_expression;
             _debugprintf("added enum member: %.*s\n", unwrap_string_view(value_name.string));
             type->enum_members.push_back(kv);
         }
