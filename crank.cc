@@ -2497,15 +2497,39 @@ Error<Crank_Module> load_module_from_source(std::string module_name, std::string
     return Error<Crank_Module>::okay(module);
 }
 
+struct Crank_Static_Analysis_Context {
+    int current_module_index;
+    std::vector<Crank_Module> modules;
+    std::vector<Crank_Declaration*> declarations; // current scope + surrounding
+
+    Crank_Module& current_module() {
+        return modules[current_module_index];
+    }
+
+    void add_module(Crank_Module module) {
+        modules.push_back(module);
+    }
+
+    void add_declaration(Crank_Declaration* decl) {
+        declarations.push_back(decl);
+    }
+
+    void pop_declarations(int n) {
+        for (int i = 0; i < n; ++i) {
+            declarations.pop_back();
+        }
+    }
+};
+
 // This is a separate pass that fixes variable references
 // inside of expressions to make sure that AST is "complete".
 // constants should already be evaluated since they are trivial
 // NOTE: requires context
-void resolve_expression_types(Crank_Expression* expression) {
+void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expression* expression) {
     
 }
 
-void resolve_statement_types(Crank_Statement* statement) {
+void resolve_statement_types(Crank_Static_Analysis_Context& context, Crank_Statement* statement) {
     if (!statement) return;
 
     switch (statement->type) { // since I allow any statement to be a body
@@ -2515,41 +2539,43 @@ void resolve_statement_types(Crank_Statement* statement) {
         } break;
         case STATEMENT_BLOCK: {
             for (auto& statement : statement->block_statement.body) {
-                resolve_statement_types(statement);
+                resolve_statement_types(context, statement);
             }
         } break;
         case STATEMENT_IF: {
-            resolve_expression_types(statement->if_statement.condition);
-            resolve_statement_types(statement->if_statement.true_branch);
-            resolve_statement_types(statement->if_statement.false_branch);
+            resolve_expression_types(context, statement->if_statement.condition);
+            resolve_statement_types(context, statement->if_statement.true_branch);
+            resolve_statement_types(context, statement->if_statement.false_branch);
         } break;
         case STATEMENT_FOR: {
             for (auto& statement : statement->for_statement.initialization_statements) {
-                resolve_statement_types(statement);
+                resolve_statement_types(context, statement);
             }
-            resolve_expression_types(statement->for_statement.condition);
+            resolve_expression_types(context, statement->for_statement.condition);
             for (auto& statement : statement->for_statement.postloop_statements) {
-                resolve_statement_types(statement);
+                resolve_statement_types(context, statement);
             }
-            resolve_statement_types(statement->for_statement.body);
+            resolve_statement_types(context, statement->for_statement.body);
         } break;
         case STATEMENT_WHILE: {
-            resolve_expression_types(statement->while_statement.condition);
-            resolve_statement_types(statement->while_statement.action);
+            resolve_expression_types(context, statement->while_statement.condition);
+            resolve_statement_types(context, statement->while_statement.action);
         } break;
         case STATEMENT_RETURN: {
-            resolve_expression_types(statement->return_statement.result);
+            resolve_expression_types(context, statement->return_statement.result);
         } break;
         case STATEMENT_EXPRESSION: {
-            resolve_expression_types(statement->expression_statement.expression);
+            resolve_expression_types(context, statement->expression_statement.expression);
         } break;
     }
 }
 
-void resolve_all_module_types(Crank_Module& module) {
+void resolve_all_module_types(Crank_Static_Analysis_Context& context) {
+    Crank_Module& module = context.current_module();
+
     for (auto& decl : module.decls) {
         if (decl.decl_type == DECL_OBJECT && decl.object_type->is_function) {
-            resolve_statement_types(decl.expression->value.body);
+            resolve_statement_types(context, decl.expression->value.body);
         }
     }
 }
@@ -2612,10 +2638,10 @@ int main(int argc, char** argv){
 #else
     std::vector<std::string> module_names;
     std::vector<std::string> linkage_lib_names;
-    Crank_Codegen* generator = new CPlusPlusCodeGenerator();
     std::string output_name = "a";
     bool keep_cplusplus = false;
 
+    Crank_Static_Analysis_Context context = {};
     for (int i = 1; i < argc; ++i) {
         char* current_argument = argv[i];
 
@@ -2653,12 +2679,14 @@ int main(int argc, char** argv){
                 if (c == '.') break;
                 module_name_hack += c;
             }
+
             auto e = load_module_from_source(module_name_hack, buffer.data);
-            resolve_all_module_types(e);
+            // resolve_all_module_types(e);
 
             if (e.good) {
-                printf("okay! outputting module!\n");
-                generator->output_module(e);
+                printf("registering module\n");
+                context.add_module(e.value);
+                // generator->output_module(e);
             } else {
                 printf("not good! module bad!\n");
                 printf("%s\n", e.message);
@@ -2667,6 +2695,15 @@ int main(int argc, char** argv){
 
             module_names.push_back(generator->get_module_compiled_name(e));
         }
+    }
+
+    Crank_Codegen* generator = new CPlusPlusCodeGenerator();
+    for (int i = 0; i < context.modules.size(); ++i) {
+        context.current_module_index = i;
+        resolve_all_module_types(context);
+        // array sizes, enums, and constant expressions
+        // fold_all_constants(context);
+        generator->output_module(context.current_module());
     }
 
     if (module_names.size()) {
