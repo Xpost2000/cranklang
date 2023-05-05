@@ -1269,6 +1269,7 @@ Crank_Expression* parse_array_index(Tokenizer_State& tokenizer) {
 }
 
 Crank_Expression* parse_property_accessor(Tokenizer_State& tokenizer) {
+    // auto base_accessor = parse_array_index(tokenizer);
     auto base_accessor = parse_array_index(tokenizer);
 
     if (tokenizer.peek_next().type == TOKEN_DOT) {
@@ -2492,6 +2493,13 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
               must have a symbol for it's right hand side.
              */
             if (expression->operation == OPERATOR_PROPERTY_ACCESS) {
+                // NOTE:
+                // breaks when doing stuff like
+                // a.b[0] = 2;
+                // probably because it's compiled as
+                // (property-access a (array-access b 0))
+                // so it's not as trivial but it's not too big of a deal
+                // TODO: investigate later. This is a weird issue but it's not a deal breaker.
                 assert(expression->binary.second->value.value_type == VALUE_TYPE_SYMBOL && "Property accesses can only be done on literals!");
                 // resolve the special case
 

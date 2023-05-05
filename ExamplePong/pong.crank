@@ -10,6 +10,13 @@
 // *sigh* the problem with your own programming language
 // is that you have to write the bindings yourself...
 
+typedef Color: struct {
+    r: u8 = 0;
+    g: u8 = 0;
+    b: u8 = 0;
+    a: u8 = 255;
+};
+
 // RAYLIB START
 InitWindow: extern void(width: int, height: int, title: char*);
 IsKeyPressed: extern bool(key: int);
@@ -19,6 +26,8 @@ IsKeyPressed: extern bool(key: int);
 CloseWindow: extern void();
 BeginDrawing: extern void();
 EndDrawing: extern void();
+fmt: extern("TextFormat") char*(text: char*, ...);
+DrawText: extern void(text: char*, posX: int, posY: int, fontSize: int, color: Color);
 
 typedef Key : enum i32 {
     KEY_NULL            = 0,        // Key: NULL, used for no key pressed
@@ -146,7 +155,8 @@ typedef PaddleSide : enum u8 {
 };
 
 typedef Paddle: struct {
-    side: PaddleSide;
+    // side: PaddleSide; check this later
+    side: PaddleSide = PaddleSide.Left;
 
     x: int = 0;
     y: int = 0;
@@ -165,13 +175,22 @@ typedef GameState: struct {
 main: int(argc: int, argv: strlit[]) {
       game_state: GameState;
 
+      (game_state.scores)[0] = 0;
+      (game_state.scores)[1] = 0;
+
       InitWindow(1024, 768, "Hello Cranky Pong!");
 
       while !game_state.quit {
             if IsKeyPressed(Key.KEY_F1) game_state.quit = true;
 
             BeginDrawing();
-
+            {
+                // interesting review of precedence order. Might need to adjust something...
+                // hopefully won't break everything later...
+                // or I might just keep this.
+                DrawText(fmt("Player 1: %d", (game_state.scores)[0]), 0, 0, 32, Color: {255, 0, 0, 255});
+                DrawText(fmt("Player 2: %d", (game_state.scores)[1]), 1024-200, 0, 32, Color: {0, 0, 255, 255});
+            }
             EndDrawing();
       }
 

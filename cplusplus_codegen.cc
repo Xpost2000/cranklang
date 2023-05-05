@@ -134,14 +134,15 @@ protected:
                         fprintf(output, ", ");
                     }
                 }
+                if (decl->object_type->is_variadic) {
+                    if (decl->object_type->call_parameters.size() > 0) fprintf(output, ",");
+                    fprintf(output, "...");
+                }
                 fprintf(output, ")");
             } else {
                 if (decl->has_value) {
                     fprintf(output, " = ");
                     output_expression(current_module, output, decl->expression);
-                // } else {
-                // I **do** want zero initialization, but this needs to be special cased
-                //     fprintf(output, " = {}");
                 }
             }
         } else {
@@ -217,6 +218,10 @@ protected:
                 else {
                     fprintf(output, ", ");
                 }
+            }
+            if (decl->object_type->is_variadic) {
+                if (decl->object_type->call_parameters.size() > 0) fprintf(output, ",");
+                fprintf(output, "...");
             }
             fprintf(output, ")\n");
 
