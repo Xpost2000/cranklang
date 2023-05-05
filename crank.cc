@@ -248,6 +248,8 @@ struct Crank_Type {
      */
     Crank_Type* enum_internal_type = nullptr;
     std::vector<Crank_Enum_KeyValue> enum_members;
+
+    // NOTE: non-structs can have members. But it'll be "built-ins". Probably.
     std::vector<Crank_Declaration> members;
 };
 
@@ -2578,7 +2580,49 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
         } break;
         case EXPRESSION_BINARY: {
             resolve_expression_types(context, expression->binary.first);
-            resolve_expression_types(context, expression->binary.second);
+
+            /*
+              I don't know why I spent so long thinking about this, but I realized the beauty
+              of this fact is that in reality, the second expression in a binary expression **must**
+              be a trivial value such as an expression as it is the last in a nest.
+
+              Property accesses are a special case where it's even simpler because a valid property access
+              must have a symbol for it's right hand side.
+             */
+            if (expression->operation == OPERATOR_PROPERTY_ACCESS) {
+                assert(expression->binary.second->value.value_type == VALUE_TYPE_SYMBOL && "Property accesses can only be done on literals!");
+                // resolve the special case
+
+                auto type_of_lhs = follow_typedef_chain(get_expression_type(expression->binary.first));
+                assert(type_of_lhs->type == TYPE_UNION ||
+                       type_of_lhs->type == TYPE_RECORD ||
+                       type_of_lhs->type == TYPE_ENUMERATION && "These are the only types with members");
+
+                bool resolved = false;
+                // this weird separation is deliberate because enums have all members with the same type
+                // every other thing does not
+                if (type_of_lhs->type == TYPE_ENUMERATION) {
+                    for (auto& member : type_of_lhs->enum_members) {
+                        if (member.name == expression->binary.second->value.symbol_name) {
+                            expression->binary.second->value.type = get_base_type(type_of_lhs);
+                            resolved = true;
+                            break;
+                        }
+                    }
+                } else {
+                    for (auto& member : type_of_lhs->members) {
+                        if (member.name == expression->binary.second->value.symbol_name) {
+                            expression->binary.second->value.type = member.object_type;
+                            resolved = true;
+                            break;
+                        }
+                    }
+                }
+
+                assert(resolved && "Unable to resolve member property!");
+            } else {
+                resolve_expression_types(context, expression->binary.second);
+            }
         } break;
     }
 }

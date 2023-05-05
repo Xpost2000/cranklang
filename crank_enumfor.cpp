@@ -37,15 +37,15 @@ typedef int8_t  i8;
 
 typedef u32 uint;
 enum class LightSignal : s32 { // enum name
-RED = -815797968,BLUE = -815797968,GREEN = -815797968,};;
+RED = 641722192,BLUE = 641722192,GREEN = 641722192,};;
 enum class TestFlagBinary : u64 { // enum name
-a = -815797968,b = -815797968,c = -815797968,d = -815797968,e = -815797968,};;
+a = 641722192,b = 641722192,c = 641722192,d = 641722192,e = 641722192,};;
 enum class TestFlagHex : u64 { // enum name
-a = -815797968,b = -815797968,c = -815797968,d = -815797968,e = -815797968,f = -815797968,g = -815797968,h = -815797968,i = -815797968,j = -815797968,k = -815797968,l = -815797968,m = -815797968,n = -815797968,o = -815797968,p = -815797968,q = -815797968,r = -815797968,s = -815797968,t = -815797968,};;
+a = 641722192,b = 641722192,c = 641722192,d = 641722192,e = 641722192,f = 641722192,g = 641722192,h = 641722192,i = 641722192,j = 641722192,k = 641722192,l = 641722192,m = 641722192,n = 641722192,o = 641722192,p = 641722192,q = 641722192,r = 641722192,s = 641722192,t = 641722192,};;
 enum class Numbers : s8 { // enum name
-NegativeFive = -815797968,NegativeFour = -815797968,NegativeThree = -815797968,NegativeTwo = -815797968,NegativeOne = -815797968,Zero = -815797968,One = -815797968,Two = -815797968,Three = -815797968,Four = -815797968,Five = -815797968,};;
+NegativeFive = 641722192,NegativeFour = 641722192,NegativeThree = 641722192,NegativeTwo = 641722192,NegativeOne = 641722192,Zero = 641722192,One = 641722192,Two = 641722192,Three = 641722192,Four = 641722192,Five = 641722192,};;
 enum class numbers2 : s8 { // enum name
-A = -815797968,B = -815797968,C = -815797968,D = -815797968,E = -815797968,};;
+A = 641722192,B = 641722192,C = 641722192,D = 641722192,E = 641722192,};;
 extern "C" {
 int  printf(char * fmt);}; // end extern "C" 
 
@@ -57,7 +57,7 @@ int  i = 3;
 ;int  j = 13;
 ;while (i<j) {
 {
-printf("i: %d, j: %d\n", i, j, x);}
+printf("i: %d, j: %d\n", i, j);}
 i+=1;j-=1;}
 }
 printf("I want to get an enum!!! %d %d\n", (s8)numbers2::A, (s8)numbers2::D+(s32)LightSignal::RED);return 0;
