@@ -512,7 +512,7 @@ Crank_Type* lookup_type(
 struct Crank_Module {
     /* general purpose declaration list. */
     /* should be separated into more specific types to make things easier to look at. */
-    std::string module_name; // usually just the file name. Can be overriden?
+    std::string module_name; // usually just the file name. Can be overriden? No sub modules.
     std::vector<Crank_Module*> imports;
     std::vector<Crank_Declaration> decls;
 
@@ -2490,16 +2490,58 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
                 assert(value.call_parameters.size() == 0 && "Do not know how to handle call parameters yet!");
                 // otherwise nothing to worry about.
             } else {
+                _debugprintf("Trying to resolve symbol.");
                 assert(value.type == nullptr &&
                        "Unless I'm crazy, all symbols should have no types yet. That defeats the purpose of doing this step.");
                 // this is a symbol which is the part I actually care about
                 auto& symbol_name = value.symbol_name;
                 // first look it up from existing declarations
                 bool resolved = false;
+
+                // check module declarations
+                if (!resolved) {
+                    // NOTE: for now I'll assume modules are declared at global scope
+                    // since Crank_Types assume a single name and are not "package" scoped
+                    // or anything yet.
+
+                    // I can make the following assumptions as I don't want Crank to balloon out of control
+                    // in terms of complexity:
+                    //   - Only modules can be used to scope types
+                    //   - There are no nested types.
+                    // those two assumptions make the language simple enough that I can do stuff with that.
+                    // NOTE: Modules can use their own fully qualified names for their declarations if they want
+                    // but in the current module with evaluating stuff we can safely assume that they imply using
+                    // their own module or something like that.
+                    // how would I do nested modules though?
+
+                    // context will include "access" chains
+                    // when faced with a property access so I can resolve
+                    // "members" of stuff
+
+                    // if access chain is empty we will just check modules
+                    // for typedefs or globals?
+
+                    // if there is an access chain we need to figure out what
+                    // the access is coming from...
+                    // should be fine since I will place the type of the object
+                    for (auto& module : context.modules) {
+                        for (auto& decl : module.decls) {
+                            if (decl.name == symbol_name) {
+                                _debugprintf("(module decl)Found declaration that resolves for : %s  (%s)", symbol_name.c_str(), decl.name.c_str());
+                                value.type = decl.object_type;
+                                resolved = true;
+                                break;
+                            } 
+                        }
+
+                        if (resolved) break;
+                    }
+                }
+
                 if (!resolved) {
                     for (auto& decl : context.declarations) {
                         if (decl->name == symbol_name) {
-                            _debugprintf("Found declaration that resolves for : %s  (%s)", symbol_name.c_str(), decl->name.c_str());
+                            _debugprintf("(context decl)Found declaration that resolves for : %s  (%s)", symbol_name.c_str(), decl->name.c_str());
                             value.type = decl->object_type;
                             resolved = true;
                             break;
@@ -2522,7 +2564,7 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
                     for (auto& call_param : value.call_parameters) {
                         _debugprintf("Expression here");
                         _debug_print_expression_tree(call_param);
-                        _debugprintf("");
+                        printf("\n");
                         resolve_expression_types(context, call_param);
                     }
                 }
