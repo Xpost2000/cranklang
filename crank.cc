@@ -1096,7 +1096,7 @@ Crank_Type* get_binary_expression_type(Crank_Expression* expression, bool strict
     if (lhs != rhs) {
         if (!strict) {
             if (is_type_numeric(lhs) && is_type_numeric(rhs)) {
-                
+                return superior_numeric_type(lhs, rhs);
             }
         } else {
             fail = true;
@@ -2530,6 +2530,24 @@ struct Crank_Static_Analysis_Context {
 // NOTE: requires context
 void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expression* expression) {
     if (!expression) return;
+    // the real type magic is here.
+    switch (expression->type) {
+        case EXPRESSION_VALUE: {
+            auto& value = expression->value;
+            if (value.value_type == VALUE_TYPE_LITERAL) {
+                assert(value.array_elements.size() == 0 && "Do not known how to handle array literals yet!");
+                assert(value.call_parameters.size() == 0 && "Do not know how to handle call parameters yet!");
+                // otherwise nothing to worry about.
+            }
+        } break;
+        case EXPRESSION_UNARY: {
+            resolve_expression_types(context, expression->unary.value);
+        } break;
+        case EXPRESSION_BINARY: {
+            resolve_expression_types(context, expression->unary.first);
+            resolve_expression_types(context, expression->unary.second);
+        } break;
+    }
 }
 
 void resolve_statement_types(Crank_Static_Analysis_Context& context, Crank_Statement* statement) {
@@ -2710,7 +2728,6 @@ int main(int argc, char** argv){
             }
 
             auto e = load_module_from_source(module_name_hack, buffer.data);
-            // resolve_all_module_types(e);
 
             if (e.good) {
                 printf("registering module\n");
@@ -2726,6 +2743,7 @@ int main(int argc, char** argv){
         }
     }
 
+    _debugprintf("Type resolution stage");
     for (int i = 0; i < context.modules.size(); ++i) {
         context.current_module_index = i;
         resolve_all_module_types(context);
