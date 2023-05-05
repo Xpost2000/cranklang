@@ -611,6 +611,7 @@ Error<Crank_Type_Declaration> read_type_declaration(Tokenizer_State& tokenizer) 
     _debugprintf("try to find array specifier\n");
     while (true) {
         int current_dimension = -1;
+        // this should also be an expression.
         int read_result = read_array_specifier(tokenizer, &current_dimension);
         if (read_result == 1) {
             array_dimensions.push_back(current_dimension);
@@ -2148,6 +2149,10 @@ Error<Crank_Declaration> read_inline_declaration(Tokenizer_State& tokenizer) {
         assert(type->is_function);
         _debugprintf("This decl is a function!\n");
         auto function_statement = parse_any_statement(tokenizer);
+        assert(
+            function_statement->type != STATEMENT_DECLARATION ||
+            function_statement->type != STATEMENT_EXPRESSION
+        );
         if (function_statement) {
             _debugprintf("function declaration!\n");
             result.has_value = true;
@@ -2245,6 +2250,7 @@ bool read_union_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
     return true;
 }
 
+// maybe I should push this to be later?
 bool read_enum_definition(Crank_Type* type, Tokenizer_State& tokenizer) {
     assert(type->type == TYPE_ENUMERATION && "?");
     _debugprintf("Trying to read decl\n");
@@ -2491,6 +2497,41 @@ Error<Crank_Module> load_module_from_source(std::string module_name, std::string
     return Error<Crank_Module>::okay(module);
 }
 
+// This is a separate pass that fixes variable references
+// inside of expressions to make sure that AST is "complete".
+// constants should already be evaluated since they are trivial
+// NOTE: requires context
+void resolve_statement_variable_types(Crank_Statement* statement) {
+    switch (function_body->type) { // since I allow any statement to be a body
+        case STATEMENT_BLOCK: {
+            
+        } break;
+        case STATEMENT_IF: {
+            
+        } break;
+        case STATEMENT_FOR: {
+            
+        } break;
+        case STATEMENT_WHILE: {
+            
+        } break;
+        case STATEMENT_RETURN: {
+            
+        } break;
+        case STATEMENT_EXPRESSION: {
+            
+        } break;
+    }
+}
+
+void resolve_all_module_types() {
+    for (auto& decl : decls) {
+        if (decl.decl_type == DECL_OBJECT && decl.object_type->is_function) {
+            resolve_function_statement_types(decl.expression->value.body);
+        }
+    }
+}
+
 void register_default_types() {
     register_new_type("int",   TYPE_INTEGER32);
     register_new_type("uint",  TYPE_UNSIGNEDINTEGER32);
@@ -2591,6 +2632,7 @@ int main(int argc, char** argv){
                 module_name_hack += c;
             }
             auto e = load_module_from_source(module_name_hack, buffer.data);
+            resolve_all_module_types(e);
 
             if (e.good) {
                 printf("okay! outputting module!\n");
