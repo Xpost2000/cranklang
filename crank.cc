@@ -2380,34 +2380,9 @@ Error<Crank_Declaration> parse_variable_decl(Tokenizer_State& tokenizer) {
     return Error<Crank_Declaration>::okay(inline_decl.value);
 }
 
-/**
- * NOTE: 4/29/
- *
- * With more clear ideas on how to make this still allow for correct compilation behavior
- * whilst still being simple I'll do this.
- *
- *
- * Parse Types first
- * the type system is used to check if a declaration is legal (does the type of something exist?), and therefore
- * a separate pass to parse all the types is needed.
- *
- * lookup_type, will also have to get access to the module tree. In order to parse things.
- * It'll be complicated because types are not classified as expression objects so they'll require slightly special parsing
- * in order to qualify their names.
- *
- * IE:
- * name : ModuleName.Type = ModuleName.GLOBAL_VARIABLE + 34;
- *
- * However Crank is still a toy language, not meant for production and for now I can allow modules to be single level
- * which simplifies a lot of cases.
- *
- * Module name can be specified through
- * modname NewModuleName;
- *
- * The new module name cannot include dots.
- *
- * This should make it useful enough to be practical, but then falls under Java's weakness of one file per "module"
- **/
+#include "debug_print.cc"
+#include "crank_parsing_tests.cc"
+
 Error<Crank_Module> load_module_from_source(std::string module_name, std::string_view source_code) {
     Crank_Module module;
     module.module_name = module_name;
@@ -2524,6 +2499,7 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
                 if (!resolved) {
                     for (auto& decl : context.declarations) {
                         if (decl->name == symbol_name) {
+                            _debugprintf("Found declaration that resolves for : %s  (%s)", symbol_name.c_str(), decl->name.c_str());
                             value.type = decl->object_type;
                             resolved = true;
                             break;
@@ -2534,8 +2510,21 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
                 // finally try to see if a type matches it.
                 if (!resolved) {
                     auto type_ptr = lookup_type(symbol_name);
-                    value.type = type_ptr;
-                    resolved = true;
+                    if (type_ptr) {
+                        value.type = type_ptr;
+                        resolved = true;
+                    }
+                }
+
+                if (value.is_function_call) {
+                    // also check against the other stuff
+                    _debugprintf("Parsing function parameters for types");
+                    for (auto& call_param : value.call_parameters) {
+                        _debugprintf("Expression here");
+                        _debug_print_expression_tree(call_param);
+                        _debugprintf("");
+                        resolve_expression_types(context, call_param);
+                    }
                 }
 
                 // better error message / no assertion
@@ -2628,6 +2617,10 @@ void resolve_all_module_types(Crank_Static_Analysis_Context& context) {
     context.declarations.clear();
 }
 
+void resolve_and_fold_all_constants(Crank_Static_Analysis_Context& context) {
+    
+}
+
 void register_default_types() {
     register_new_type("int",   TYPE_INTEGER32);
     register_new_type("uint",  TYPE_UNSIGNEDINTEGER32);
@@ -2673,8 +2666,6 @@ void delete_file(const char* where) {
 #endif
 }
 
-#include "debug_print.cc"
-#include "crank_parsing_tests.cc"
 
 int main(int argc, char** argv){
     register_default_types();
@@ -2749,13 +2740,12 @@ int main(int argc, char** argv){
     for (int i = 0; i < context.modules.size(); ++i) {
         context.current_module_index = i;
         resolve_all_module_types(context);
-        _debugprintf("If I survived this. All symbols must be resolved by now!");
 
         // after this stage I can allow for type inference.
         // so I can do that
 
         // array sizes, enums, and constant expressions
-        // fold_all_constants(context);
+        resolve_and_fold_all_constants(context);
         generator->output_module(context.current_module());
     }
 
