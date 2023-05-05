@@ -18,6 +18,10 @@ typedef LightSignal: enum s32 {
         GREEN,
 };
 
+typedef BasicConstantExpressions : enum i64 {
+        OnePlusThree = 1 + 3,
+};
+
 typedef TestFlagBinary: enum u64 {
         a = 0b0,
         b = 0b1,

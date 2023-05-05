@@ -38,6 +38,8 @@ typedef int8_t  i8;
 typedef u32 uint;
 enum class LightSignal : s32 { // enum name
 RED = 0,BLUE = 1,GREEN = 2,};;
+enum class BasicConstantExpressions : i64 { // enum name
+OnePlusThree = 4,};;
 enum class TestFlagBinary : u64 { // enum name
 a = 0,b = 1,c = 2,d = 3,e = 4,};;
 enum class TestFlagHex : u64 { // enum name
