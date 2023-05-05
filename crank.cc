@@ -69,15 +69,21 @@ enum Crank_Declaration_Type {
 // simple type system
 enum Crank_Types {
     TYPE_NUMERIC, // unresolved numeric type. Will be converted as needed. 
+
+    /*
+      AVOID REORDERING THESE IF POSSIBLE,
+      THESE ARE ORDERED SPECIFICALLY TO IMPLY THE IMPLICIT
+      TYPE PROMOTION ORDER.
+    */
     TYPE_BOOLEAN, // NOT IMPLEMENTED?
-    TYPE_INTEGER8,
-    TYPE_INTEGER16,
-    TYPE_INTEGER32,
-    TYPE_INTEGER64,
     TYPE_UNSIGNEDINTEGER8,
     TYPE_UNSIGNEDINTEGER16,
     TYPE_UNSIGNEDINTEGER32,
     TYPE_UNSIGNEDINTEGER64,
+    TYPE_INTEGER8,
+    TYPE_INTEGER16,
+    TYPE_INTEGER32,
+    TYPE_INTEGER64,
     TYPE_FLOAT,
     TYPE_DOUBLE,
     TYPE_STRINGLITERAL,
@@ -243,6 +249,14 @@ struct Crank_Type {
 // - Check array dimension matching
 // - Check function matching!
 
+Crank_Type* enumeration_get_underlying_type(Crank_Type* type) {
+    if (type->type == TYPE_ENUMERATION) {
+        type = type->enum_internal_type;
+    }
+
+    return type;
+}
+
 Crank_Type* follow_typedef_chain(Crank_Type* type) {
     Crank_Type* cursor = type;
     while (cursor->rename_of) {
@@ -251,8 +265,21 @@ Crank_Type* follow_typedef_chain(Crank_Type* type) {
     return cursor;
 }
 
+Crank_Type* get_base_type(Crank_Type* type) {
+    return enumeration_get_underlying_type(
+        follow_typedef_chain(type)
+    );
+}
+
+/**
+NOTE: does not take into account pointer arithmetic but that's okay
+since if it's just pure numbers, it'll just calculate like a normal number.
+
+Technically pointers will be considered numeric types and evaluate safely...
+I'll have to see though, since the type checker does not validate declarations/assignments
+**/
 bool is_type_numeric(Crank_Type* type) {
-    type = follow_typedef_chain(type);
+    type = follow_typedef_chain(type); 
 
     switch (type->type) {
         case TYPE_NUMERIC:
@@ -269,8 +296,20 @@ bool is_type_numeric(Crank_Type* type) {
 
     return false;
 }
+
+Crank_Type* superior_numeric_type(Crank_Type* a, Crank_Type* b) {
+    // NOTE: Crank_Types is ordered in such a way to make this trivial
+    // also I assume these are already numeric types
+    a = get_base_type(a);
+    b = get_base_type(b);
+    int diff = a->type - b->type;
+    if (diff < 0) return b;
+
+    return a;
+}
+
 bool is_type_integer(Crank_Type* type) {
-    type = follow_typedef_chain(type);
+    type = get_base_type(type);
 
     switch (type->type) {
         case TYPE_BOOLEAN:
@@ -286,7 +325,7 @@ bool is_type_integer(Crank_Type* type) {
     return false;
 }
 bool is_type_unsigned_integer(Crank_Type* type) {
-    type = follow_typedef_chain(type);
+    type = get_base_type(type);
 
     switch (type->type) {
         case TYPE_BOOLEAN:
@@ -299,12 +338,6 @@ bool is_type_unsigned_integer(Crank_Type* type) {
     return false;
 }
 
-// will return the "greater" of two types
-// implicit conversions.
-Crank_Type* numeric_type_promotion(Crank_Type* a, Crank_Type* b, Crank_Type* maximum_promoted_type) {
-    unimplemented("numeric_type_promotion");
-}
-
 // Crank type match is a strict type matching.
 // Typecasting or promotion or implicit conversion is handled else where.
 bool crank_type_match(Crank_Type* a, Crank_Type* b) {
@@ -313,6 +346,7 @@ bool crank_type_match(Crank_Type* a, Crank_Type* b) {
     _debugprintf("Crank_Type a (%p) (name: %s array_dim(n=%d))\n", a, a->name.c_str(), a->rename_of, a->array_dimensions.size());
     _debugprintf("Crank_Type b (%p) (name: %s array_dim(n=%d))\n", b, b->name.c_str(), b->rename_of, b->array_dimensions.size());
 
+    // NOTE: enums and such should be considered distinct types
     a = follow_typedef_chain(a);
     b = follow_typedef_chain(b);
 
@@ -944,7 +978,7 @@ bool is_constant_expression(Crank_Expression* expression) {
 
 bool is_value_expression_numeric(Crank_Expression* expression) {
     auto& value = expression->value;
-    auto object_type = follow_typedef_chain(value.type);
+    auto object_type = get_base_type(value.type);
 
     // thankfully this is pretty simple...
     // NOTE: if it's a function call... I need to check what type
@@ -964,24 +998,25 @@ bool is_binary_expression_numeric(Crank_Expression* expression) {
     auto& binary = expression->binary;
 
     // This has to be special-cased for enums, because enums **are**
-    // also numeric values.
+    // also numeric values. Or modules
     if (expression->operation == OPERATOR_PROPERTY_ACCESS) {
         auto& first = expression->binary.first;
-        if (first->type == EXPRESSION_VALUE &&
-            first->value.value_type == VALUE_TYPE_SYMBOL) {
-            auto& symbol_name = first->value.symbol_name;
-            auto  enum_type    = crank_type_system_find_enum_decl((char*)symbol_name.c_str());
+        if (first->type == EXPRESSION_VALUE && first->value.value_type == VALUE_TYPE_SYMBOL) {
+            { // checking for enum property access
+                auto& symbol_name = first->value.symbol_name;
+                auto  enum_type    = crank_type_system_find_enum_decl((char*)symbol_name.c_str());
 
-            if (enum_type) {
-                auto& second = expression->binary.second;
+                if (enum_type) {
+                    auto& second = expression->binary.second;
 
-                assert(
-                    second->type == EXPRESSION_VALUE &&
-                    second->value.value_type == VALUE_TYPE_SYMBOL &&
-                    "enum value access error! Second param of property access should be the value!"
-                );
+                    assert(
+                        second->type == EXPRESSION_VALUE &&
+                        second->value.value_type == VALUE_TYPE_SYMBOL &&
+                        "enum value access error! Second param of property access should be the value!"
+                    );
 
-                return true;
+                    return true;
+                }
             }
         }
 
@@ -1007,8 +1042,79 @@ bool is_expression_numeric(Crank_Expression* expression) {
 // evaluated sub-expression
 // Also handles type promotion with a strict flag
 // NOTE: This allows type inference I suppose.
+
+Crank_Type* get_expression_type(Crank_Expression* expression, bool strict);
+Crank_Type* get_unary_expression_type(Crank_Expression* expression, bool strict=false) {
+    auto& unary = expression->unary;
+    auto  type  = get_expression_type(expression->unary.value, strict);
+
+    assert(type && "Expression should have a type");
+    if (expression->operation == OPERATOR_ARRAY_INDEX) {
+        auto one_less_array_dimension = type->array_dimensions;
+        one_less_array_dimension.pop_back();
+
+        return lookup_type(
+            type->name,
+            one_less_array_dimension,
+            type->call_parameters,
+            type->is_function,
+            type->is_variadic,
+            type->pointer_depth
+        );
+    } else if (expression->operation == OPERATOR_DEREFERENCE)  {
+        assert(type->pointer_depth > 0 && "You cannot dereference a plain value?");
+        return lookup_type(
+            type->name,
+            type->array_dimensions,
+            type->call_parameters,
+            type->is_function,
+            type->is_variadic,
+            type->pointer_depth-1
+        );
+    } else if (expression->operation == OPERATOR_ADDRESSOF) {
+        return lookup_type(
+            type->name,
+            type->array_dimensions,
+            type->call_parameters,
+            type->is_function,
+            type->is_variadic,
+            type->pointer_depth+1
+        );
+    }
+
+    return type;
+}
+
+// we need to check what the full expression is.
+Crank_Type* get_binary_expression_type(Crank_Expression* expression, bool strict=false) {
+    auto& binary = expression->binary;
+    auto lhs = get_expression_type(binary.first, strict);
+    auto rhs  = get_expression_type(binary.second, strict);
+
+    bool fail = false;
+    if (lhs != rhs) {
+        if (!strict) {
+            if (is_type_numeric(lhs) && is_type_numeric(rhs)) {
+                
+            }
+        } else {
+            fail = true;
+        }
+    }
+
+    if (fail) return nullptr;
+
+    return lhs;
+}
+
 Crank_Type* get_expression_type(Crank_Expression* expression, bool strict=false) {
-    unimplemented("get_expression_type");
+    switch (expression->type) {
+        case EXPRESSION_VALUE:  return expression->value.type;
+        case EXPRESSION_UNARY:  return get_unary_expression_type(expression, strict);
+        case EXPRESSION_BINARY: return get_binary_expression_type(expression, strict);
+    }
+
+    return nullptr;
 }
 
 // NOTE: will only work with numeric types for now
@@ -1019,23 +1125,31 @@ Crank_Expression* fold_constant_numeric_expression(Crank_Expression* expression)
 Crank_Expression* fold_constant_numeric_unary_expression(Crank_Expression* expression) {
     auto& unary = expression->unary;
     // unimplemented("fold_constant_numeric_unary_expression not implemented yet!");
-    Crank_Expression* result = new Crank_Expression;
-    result->type = EXPRESSION_VALUE;
-    result->value = unary.value->value;
+
     if (expression->operation == OPERATOR_NEGATE) {
+        Crank_Expression* result = new Crank_Expression;
+        result->type = EXPRESSION_VALUE;
+
+        // NOTE: should check if it's a constant symbol or enum
+        // which should still be negatable
+        result->value = unary.value->value;
+
         if (is_type_integer(result->value.type)) {
             assert(!is_type_unsigned_integer(result->value.type) && "NOTE: negating an unsigned number is not defined?");
             result->value.int_value *= -1;
         }
-    } else {
-        assert(false && "undefined operation behavior for now!");
+
+        return result;
     }
-    return result;
+
+    return nullptr;
 }
+
 Crank_Expression* fold_constant_numeric_binary_expression(Crank_Expression* expression) {
     auto& binary = expression->binary;
     unimplemented("fold_constant_numeric_binary_expression not implemented yet! I require numeric_type_promotion!");
 }
+
 Crank_Expression* fold_constant_numeric_expression(Crank_Expression* expression) {
     if (!is_constant_expression(expression)) return nullptr;
     if (!is_expression_numeric(expression)) return nullptr;
