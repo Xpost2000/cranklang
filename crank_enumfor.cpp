@@ -61,7 +61,7 @@ ABC  test = {
 1,2,3,}
 ;
 ;ABC * testptr = (&test);
-;printf("%c\n", "adf"[0]);printf("Here's an interesting for loop");{
+;printf("%d, %d, %d\n", *(testptr).a, *(testptr).b, *(testptr).c);printf("%c\n", "adf"[0]);printf("Here's an interesting for loop");{
 int  i = 3;
 ;int  j = 13;
 ;while (i<j) {

@@ -466,7 +466,11 @@ Crank_Type* lookup_type(
 
         if (result == nullptr) {
             // register the derivative type.
-            result = register_new_type(name, lookup_type(name)->type, array_dimensions, call_parameters, is_function, is_variadic, pointer_depth);
+            auto base_type             = lookup_type(name);
+            result                     = register_new_type(name, base_type->type, array_dimensions, call_parameters, is_function, is_variadic, pointer_depth);
+            result->enum_members       = base_type->enum_members;
+            result->enum_internal_type = base_type->enum_internal_type;
+            result->members            = base_type->members;
         }
     }
 
