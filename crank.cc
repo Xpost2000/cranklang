@@ -277,7 +277,6 @@ bool is_type_numeric(Crank_Type* type) {
         case TYPE_UNSIGNEDINTEGER8: case TYPE_UNSIGNEDINTEGER16:
         case TYPE_UNSIGNEDINTEGER32: case TYPE_UNSIGNEDINTEGER64:
         case TYPE_FLOAT: case TYPE_DOUBLE:
-        case TYPE_ENUMERATION:
             return true;
         default: break;
     }
@@ -973,35 +972,10 @@ bool is_unary_expression_numeric(Crank_Expression* expression) {
     return is_expression_numeric(unary.value);
 }
 
+// NOTE: after the new type resolution pass, this should no longer be
+// special cased.
 bool is_binary_expression_numeric(Crank_Expression* expression) {
     auto& binary = expression->binary;
-
-    // This has to be special-cased for enums, because enums **are**
-    // also numeric values. Or modules
-    if (expression->operation == OPERATOR_PROPERTY_ACCESS) {
-        auto& first = expression->binary.first;
-        if (first->type == EXPRESSION_VALUE && first->value.value_type == VALUE_TYPE_SYMBOL) {
-            { // checking for enum property access
-                auto& symbol_name = first->value.symbol_name;
-                auto  enum_type    = crank_type_system_find_enum_decl((char*)symbol_name.c_str());
-
-                if (enum_type) {
-                    auto& second = expression->binary.second;
-
-                    assert(
-                        second->type == EXPRESSION_VALUE &&
-                        second->value.value_type == VALUE_TYPE_SYMBOL &&
-                        "enum value access error! Second param of property access should be the value!"
-                    );
-
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
     return is_expression_numeric(binary.first) && is_expression_numeric(binary.second);
 }
 
@@ -2655,9 +2629,26 @@ void resolve_and_fold_all_constants(Crank_Static_Analysis_Context& context) {
     { 
         // only enums have constants to fold for now.
         // I don't care about optimizing expressions right now
-        for (auto& decl : module.declarations) {
+        for (auto& decl : module.decls) {
             if (decl.decl_type == DECL_TYPE) {
-                
+                auto type = decl.object_type;
+                if (type->type == TYPE_ENUMERATION) {
+                    // I guess the C++ compiler can also handle this
+                    // but I need this as a test case so I can other things
+                    int start_from = 0;
+                    for (auto& member : type->enum_members) {
+                        // TODO: does not know how to look up constant symbols yet
+                        // needs a static analysis context later.
+                        // that's okay, I can do that tomorrow
+                        assert(is_constant_expression(member.expression) &&
+                               is_expression_numeric(member.expression) &&
+                        "Cannot evaluate enum member values!");
+                    }
+                } else {
+                    // irrelevant for now.
+                    // it's good practice to handle it but
+                    // the C++ compiler can handle the other cases
+                }
             }
         }
     }
