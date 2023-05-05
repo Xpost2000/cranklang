@@ -77,7 +77,7 @@ KEY_NULL = 0,KEY_APOSTROPHE = 39,KEY_COMMA = 44,KEY_MINUS = 45,KEY_PERIOD = 46,K
 enum class PaddleSide : u8 { // enum name
 Left = 0,Right = 1,};;
 struct Paddle { // struct name
-PaddleSide  side = (u8)PaddleSide::Left;
+u8  side = (u8)PaddleSide::Left;
 int  x = 0;
 int  y = 0;
 int  w = 0;

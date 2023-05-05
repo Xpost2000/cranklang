@@ -38,6 +38,8 @@ protected:
         while (type->rename_of) type = type->rename_of; // just in case anything weird happens...
         if (type->type == TYPE_STRINGLITERAL) {
             fprintf(output, "std::string ");
+        } else if (type->type == TYPE_ENUMERATION) {
+            output_type(current_module, output, get_base_type(type));
         } else {
             fprintf(output, "%s ", type->name.c_str());
         }
