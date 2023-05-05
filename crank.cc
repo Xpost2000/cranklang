@@ -2538,14 +2538,40 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
                 assert(value.array_elements.size() == 0 && "Do not known how to handle array literals yet!");
                 assert(value.call_parameters.size() == 0 && "Do not know how to handle call parameters yet!");
                 // otherwise nothing to worry about.
+            } else {
+                assert(value.type == nullptr &&
+                       "Unless I'm crazy, all symbols should have no types yet. That defeats the purpose of doing this step.");
+                // this is a symbol which is the part I actually care about
+                auto& symbol_name = value.symbol_name;
+                // first look it up from existing declarations
+                bool resolved = false;
+                if (!resolved) {
+                    for (auto& decl : context.declarations) {
+                        if (decl->name == symbol_name) {
+                            value.type = decl->object_type;
+                            resolved = true;
+                            break;
+                        }
+                    }
+                }
+
+                // finally try to see if a type matches it.
+                if (!resolved) {
+                    auto type_ptr = lookup_type(symbol_name);
+                    value.type = type_ptr;
+                    resolved = true;
+                }
+
+                // better error message / no assertion
+                assert(resolved && "Unable to resolve a symbol. Must be undeclared!");
             }
         } break;
         case EXPRESSION_UNARY: {
             resolve_expression_types(context, expression->unary.value);
         } break;
         case EXPRESSION_BINARY: {
-            resolve_expression_types(context, expression->unary.first);
-            resolve_expression_types(context, expression->unary.second);
+            resolve_expression_types(context, expression->binary.first);
+            resolve_expression_types(context, expression->binary.second);
         } break;
     }
 }
@@ -2614,7 +2640,7 @@ void resolve_all_module_types(Crank_Static_Analysis_Context& context) {
                 continue;
             }
 
-            if (decl.is_function) {
+            if (decl.object_type->is_function) {
                 resolve_statement_types(context, decl.expression->value.body);
             } else {
                 resolve_expression_types(context, decl.expression);
@@ -2747,6 +2773,7 @@ int main(int argc, char** argv){
     for (int i = 0; i < context.modules.size(); ++i) {
         context.current_module_index = i;
         resolve_all_module_types(context);
+        _debugprintf("If I survived this. All symbols must be resolved by now!");
 
         // after this stage I can allow for type inference.
         // so I can do that
