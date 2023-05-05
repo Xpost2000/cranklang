@@ -103,21 +103,24 @@ protected:
         if (decl->decl_type == DECL_OBJECT) {
             printf("outputting object\n");
 
-            output_type(current_module, output, decl->object_type);
+            if (!decl->is_constant) {
+                
+                output_type(current_module, output, decl->object_type);
 
-            if (decl->is_externally_defined && decl->extern_definition.linkage_name != "") {
-                fprintf(output, " %s", decl->extern_definition.linkage_name.c_str());
-            } else {
-                fprintf(output, " %s", decl->name.c_str());
-            }
+                if (decl->is_externally_defined && decl->extern_definition.linkage_name != "") {
+                    fprintf(output, " %s", decl->extern_definition.linkage_name.c_str());
+                } else {
+                    fprintf(output, " %s", decl->name.c_str());
+                }
 
-            if (decl->object_type->array_dimensions.size()) {
-                for (auto dimension : decl->object_type->array_dimensions) {
-                    fprintf(output, "[");
-                    if (dimension != -1) {
-                        fprintf(output, "%d", dimension);
+                if (decl->object_type->array_dimensions.size()) {
+                    for (auto dimension : decl->object_type->array_dimensions) {
+                        fprintf(output, "[");
+                        if (dimension != -1) {
+                            fprintf(output, "%d", dimension);
+                        }
+                        fprintf(output, "]");
                     }
-                    fprintf(output, "]");
                 }
             }
 

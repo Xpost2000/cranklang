@@ -37,22 +37,22 @@ typedef int8_t  i8;
 
 typedef u32 uint;
 enum class LightSignal : s32 { // enum name
-RED = 641722192,BLUE = 641722192,GREEN = 641722192,};;
+RED = 1994386224,BLUE = 1994386224,GREEN = 1994386224,};;
 enum class TestFlagBinary : u64 { // enum name
-a = 641722192,b = 641722192,c = 641722192,d = 641722192,e = 641722192,};;
+a = 1994386224,b = 1994386224,c = 1994386224,d = 1994386224,e = 1994386224,};;
 enum class TestFlagHex : u64 { // enum name
-a = 641722192,b = 641722192,c = 641722192,d = 641722192,e = 641722192,f = 641722192,g = 641722192,h = 641722192,i = 641722192,j = 641722192,k = 641722192,l = 641722192,m = 641722192,n = 641722192,o = 641722192,p = 641722192,q = 641722192,r = 641722192,s = 641722192,t = 641722192,};;
+a = 1994386224,b = 1994386224,c = 1994386224,d = 1994386224,e = 1994386224,f = 1994386224,g = 1994386224,h = 1994386224,i = 1994386224,j = 1994386224,k = 1994386224,l = 1994386224,m = 1994386224,n = 1994386224,o = 1994386224,p = 1994386224,q = 1994386224,r = 1994386224,s = 1994386224,t = 1994386224,};;
 enum class Numbers : s8 { // enum name
-NegativeFive = 641722192,NegativeFour = 641722192,NegativeThree = 641722192,NegativeTwo = 641722192,NegativeOne = 641722192,Zero = 641722192,One = 641722192,Two = 641722192,Three = 641722192,Four = 641722192,Five = 641722192,};;
+NegativeFive = 1994386224,NegativeFour = 1994386224,NegativeThree = 1994386224,NegativeTwo = 1994386224,NegativeOne = 1994386224,Zero = 1994386224,One = 1994386224,Two = 1994386224,Three = 1994386224,Four = 1994386224,Five = 1994386224,};;
 enum class numbers2 : s8 { // enum name
-A = 641722192,B = 641722192,C = 641722192,D = 641722192,E = 641722192,};;
+A = 1994386224,B = 1994386224,C = 1994386224,D = 1994386224,E = 1994386224,};;
 extern "C" {
 int  printf(char * fmt);}; // end extern "C" 
 
 int  crank_mainpoint_entry(int  argc, std::string  argv[]);
 int  crank_mainpoint_entry(int  argc, std::string  argv[])
 {
-printf("Here's an interesting for loop");{
+printf("%c\n", "adf"[0]);printf("Here's an interesting for loop");{
 int  i = 3;
 ;int  j = 13;
 ;while (i<j) {

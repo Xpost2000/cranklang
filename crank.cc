@@ -14,6 +14,8 @@
   OPTIONAL/TODO: I would like better error reporting logic, but this isn't really about
   that (IE: the intent isn't to make a sane language to use, it's just "compiler" practice)
 
+  NOTE: anything to do with arrays for the most part can safely be assumed to be "undefined" behavior.
+
   TODO: 
   - Reserve key words
   - Replace most instances of std::string
@@ -153,6 +155,9 @@ struct Crank_Value {
     std::vector<Crank_Expression*> call_parameters = {};
     Crank_Statement* body = nullptr;
 
+    // NOTE: const is not in the same way as C, and fortunately the ABI can't enforce it
+    // const is just constexpr. I will inline the value in the compiled code.
+
     // look up symbol name for values.
     std::string symbol_name;
 };
@@ -189,6 +194,7 @@ struct Crank_Declaration : public Crank_Object_Decl_Base {
 
     // Used only for DECL_OBJECT
     Crank_Expression* expression = nullptr;
+    bool is_constant = false; 
 };
 
 // mostly needed for unit testing stuff...
@@ -2108,6 +2114,14 @@ Error<Crank_Declaration> read_inline_declaration(Tokenizer_State& tokenizer) {
     } else {
         assert(!result.is_externally_defined && "Variables cannot be externally defined in this language!");
         _debugprintf("This decl is a variable!\n");
+
+        bool is_constant = false;
+        if (tokenizer.peek_next().type == TOKEN_SYMBOL) {
+            auto symbol = tokenizer.read_next();
+            assert(symbol.string == "const" && "Only decorator is const!");
+            is_constant = true;
+        }
+
         if (tokenizer.peek_next().type == TOKEN_EQUAL) {
             /*
              * NOTE: for supporting function objects
@@ -2121,6 +2135,7 @@ Error<Crank_Declaration> read_inline_declaration(Tokenizer_State& tokenizer) {
             auto value = parse_expression(tokenizer);
             assert(value);
             result.has_value = true;
+            result.is_constant = is_constant;
             result.expression = value;
 
             // assert that the evaluated type should match the type we
@@ -2557,7 +2572,7 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
                             break;
                         }
                     }
-                }
+                } // if I find a module. Even better.
 
                 assert(resolved && "Unable to resolve member property!");
             } else {
@@ -2644,7 +2659,7 @@ void resolve_all_module_types(Crank_Static_Analysis_Context& context) {
 }
 
 void resolve_and_fold_all_constants(Crank_Static_Analysis_Context& context) {
-    
+    Crank_Module& module = context.current_module();
 }
 
 void register_default_types() {

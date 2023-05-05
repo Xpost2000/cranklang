@@ -83,7 +83,10 @@ typedef numbers2: enum s8 {
 
 printf: extern int(fmt: char*, ...);
 
+// test: const int = 5;
+
 main: int(argc: int, argv: strlit[]) {
+      printf("%c\n", "adf"[0]);
       // to remove ambiguity.
       // NOTE: I don't have a lot of array behaviors right now
       // so I might have to think of something...
