@@ -180,7 +180,7 @@ main: int(argc: int, argv: strlit[]) {
       game_state: GameState;
 
       game_state.scores[0] = 0;
-      (game_state.scores)[1] = 0;
+      game_state.scores[1] = 0;
 
       InitWindow(1024, 768, "Hello Cranky Pong!");
 
@@ -192,8 +192,11 @@ main: int(argc: int, argv: strlit[]) {
                 // interesting review of precedence order. Might need to adjust something...
                 // hopefully won't break everything later...
                 // or I might just keep this.
-                DrawText(fmt("Player 1: %d", (game_state.scores)[0]), 0, 0, 32, Color: {255, 0, 0, 255});
-                DrawText(fmt("Player 2: %d", (game_state.scores)[1]), 1024-200, 0, 32, Color: {0, 0, 255, 255});
+                DrawText(fmt("Player 1: %d", game_state.scores[0]), 0, 0, 32, Color: {255, 0, 0, 255});
+                {
+                 // left align this text
+                 DrawText(fmt("Player 2: %d", game_state.scores[1]), 1024-200, 0, 32, Color: {0, 0, 255, 255});
+                }
             }
             EndDrawing();
       }
