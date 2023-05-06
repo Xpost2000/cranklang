@@ -152,7 +152,6 @@ typedef Key : enum i32 {
 
 // RAYLIB END
 
-
 typedef PaddleSide : enum u8 {
         Left,
         Right,
@@ -177,7 +176,21 @@ typedef GameState: struct {
         quit: bool = false;
 };
 
+
+// UI Constants
 DEFAULT_FONT_SIZE: int = 32;
+PADDING_X: int = 22;
+PADDING_Y: int = 22;
+
+draw_ui: void(state: GameState*) {
+    DrawText(fmt("Player 1: %d", state.scores[0]), PADDING_X, PADDING_Y, DEFAULT_FONT_SIZE, Color: {255, 0, 0, 255});
+
+    {
+        // left align this text
+        text: char* = fmt("Player 2: %d", state.scores[1]);
+        DrawText(text, 1024 - (MeasureText(text, DEFAULT_FONT_SIZE) + PADDING_X), PADDING_Y, DEFAULT_FONT_SIZE, Color: {0, 0, 255, 255});
+    }
+};
 
 main: int(argc: int, argv: strlit[]) {
       game_state: GameState;
@@ -191,18 +204,9 @@ main: int(argc: int, argv: strlit[]) {
             if IsKeyPressed(Key.KEY_F1) game_state.quit = true;
 
             BeginDrawing();
-            PADDING: int = 16;
-            {
-                // interesting review of precedence order. Might need to adjust something...
-                // hopefully won't break everything later...
-                // or I might just keep this.
-                DrawText(fmt("Player 1: %d", game_state.scores[0]), PADDING, 0, DEFAULT_FONT_SIZE, Color: {255, 0, 0, 255});
-                {
-                 // left align this text
-                 text: char* = fmt("Player 2: %d", game_state.scores[1]);
-                 DrawText(text, 1024 - (MeasureText(text, DEFAULT_FONT_SIZE) + PADDING), 0, DEFAULT_FONT_SIZE, Color: {0, 0, 255, 255});
-                }
-            }
+
+            draw_ui(&game_state);
+            
             EndDrawing();
       }
 

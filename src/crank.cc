@@ -216,12 +216,13 @@ struct Crank_Type {
     int type;
     Crank_Type* rename_of = nullptr;
     std::string name;
-    // TODO: for now shove this in here until I figure out how this array thing works.
     std::vector<int> array_dimensions; // empty is not an array. -1 means don't care. might be flexible.
 
     int pointer_depth = 0;
     bool is_function = false;
     bool is_variadic = false;
+
+    // TODO: handle default parameters
     std::vector<Crank_Declaration> call_parameters;
 
     /*
@@ -2441,6 +2442,7 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
                     }
                 }
 
+                // TODO: declarations should be checked backwards for proper variable shadowing!
                 if (!resolved) {
                     for (auto& decl : context.declarations) {
                         if (decl->name == symbol_name) {
@@ -2610,7 +2612,13 @@ void resolve_all_module_types(Crank_Static_Analysis_Context& context) {
             }
 
             if (decl.object_type->is_function) {
+                int size = context.declarations.size();
+                for (auto& function_param : decl.object_type->call_parameters) {
+                    resolve_expression_types(context, function_param.expression);
+                    context.add_declaration(&function_param);
+                }
                 resolve_statement_types(context, decl.expression->value.body);
+                context.reset_declarations_to(size);
             } else {
                 resolve_expression_types(context, decl.expression);
             }

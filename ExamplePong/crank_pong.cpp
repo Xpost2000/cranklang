@@ -92,26 +92,29 @@ int  scores[2];
 bool  quit = false;
 };;
 int  DEFAULT_FONT_SIZE = 32;
+int  PADDING_X = 22;
+int  PADDING_Y = 22;
+void  draw_ui(GameState * state);
 int  crank_mainpoint_entry(int  argc, std::string  argv[]);
+void  draw_ui(GameState * state)
+{
+DrawText(TextFormat("Player 1: %d", (*state).scores[0]), PADDING_X, PADDING_Y, DEFAULT_FONT_SIZE, {
+255,0,0,255,}
+);{
+char * text = TextFormat("Player 2: %d", (*state).scores[1]);
+;DrawText(text, (1024-(MeasureText(text, DEFAULT_FONT_SIZE)+PADDING_X)), PADDING_Y, DEFAULT_FONT_SIZE, {
+0,0,255,255,}
+);}
+}
 int  crank_mainpoint_entry(int  argc, std::string  argv[])
 {
 GameState  game_state;
-;game_state.scores[0]=0;game_state.scores[1]=0;InitWindow(1024, 768, "Hello Cranky Pong!");while ((!game_state.quit)) 
+;(game_state.scores[0]=0);(game_state.scores[1]=0);InitWindow(1024, 768, "Hello Cranky Pong!");while ((!game_state.quit)) 
 {
 if (IsKeyPressed((i32)Key::KEY_F1)) 
 
 
-game_state.quit=true;BeginDrawing();int  PADDING = 16;
-;{
-DrawText(TextFormat("Player 1: %d", game_state.scores[0]), PADDING, 0, DEFAULT_FONT_SIZE, {
-255,0,0,255,}
-);{
-char * text = TextFormat("Player 2: %d", game_state.scores[1]);
-;DrawText(text, 1024-MeasureText(text, DEFAULT_FONT_SIZE)+PADDING, 0, DEFAULT_FONT_SIZE, {
-0,0,255,255,}
-);}
-}
-EndDrawing();}
+(game_state.quit=true);BeginDrawing();draw_ui((&game_state));EndDrawing();}
 
 CloseWindow();return 0;
 }
