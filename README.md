@@ -25,8 +25,6 @@ use multiple modules primarily.
 
 ## Wishlist/Later
 - Multiple modules (right now I'm just doing it like include)
-- (maybe) anonymous functions
-- RTTI?
 - Array programming
 - Bootstrapping/Self-hosting
 
