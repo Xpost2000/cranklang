@@ -3,15 +3,17 @@
 A simple alternative C language that transpiles.
 
 **With no formal compiler education, I jump into writing a compiler, which turns out reasonably well all things considered.**
+**NOTE the language is deliberately simple because this is my first actual programming language implemented effectively blind!**
+**If I ever make a future language, I'll probably read the Dragon Book or take a look at LCC or something!**
 
 The codebase is kind of ugly as it evolves slightly, but it's reasonably okay to refactor compared to Legends anyways.
 
+
 ## Feature List Summary
-Crank is technically useful enough to write programs now, and really just lacks a way to
-use multiple modules primarily.
     
 - Handmade statically typed language that compiles to C++.
 - Handmade recursive descent parser
+- Constant folding
 - Expression parsing and correct operator precedence order.
 - *A simple FFI which allows you to use C functions*
 - Out of order function declaration
