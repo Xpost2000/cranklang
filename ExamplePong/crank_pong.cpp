@@ -100,9 +100,11 @@ if (IsKeyPressed((i32)Key::KEY_F1))
 game_state.quit=true;BeginDrawing();{
 DrawText(TextFormat("Player 1: %d", game_state.scores[0]), 0, 0, 32, {
 255,0,0,255,}
-);DrawText(TextFormat("Player 2: %d", game_state.scores[1]), 1024-200, 0, 32, {
+);{
+DrawText(TextFormat("Player 2: %d", game_state.scores[1]), 1024-200, 0, 32, {
 0,0,255,255,}
 );}
+}
 EndDrawing();}
 
 CloseWindow();return 0;
