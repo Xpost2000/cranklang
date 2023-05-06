@@ -48,15 +48,12 @@ public:
         auto module_file_name = get_module_compiled_name(module);
         FILE* file = fopen(module_file_name.c_str(), "wb+");
 
-        printf("Outputting preamble\n");
         output_preamble(module, file);
 
-        printf("Outputting imports!\n");
         for (auto& import : module.imports) {
             output_import(module, file, import);
         }
 
-        printf("Outputting declarations!\n");
         for (auto& decl : module.decls) {
             if (decl.name == "main") {
                 decl.name = "crank_mainpoint_entry";
@@ -66,7 +63,6 @@ public:
 
         for (auto& decl : module.decls) {
             if (decl.object_type->is_function) {
-                printf("outputting function decl!\n");
                 output_function_declaration(module, file, &decl);
             }
         }

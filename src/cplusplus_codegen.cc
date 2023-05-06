@@ -34,7 +34,6 @@ protected:
     // idk how to output function pointers quite yet!
     // so that's undefined behavior!
     void output_type(Crank_Module& current_module, FILE* output, Crank_Type* type) {
-        printf("output type\n");
         while (type->rename_of) type = type->rename_of; // just in case anything weird happens...
         if (type->type == TYPE_STRINGLITERAL) {
             fprintf(output, "std::string ");
@@ -58,7 +57,6 @@ protected:
     // STUPID TODO: REMOVE OR FIX
     void output_function_param_item(Crank_Module& current_module, FILE* output, Crank_Declaration* decl) {
         if (decl->decl_type == DECL_OBJECT) {
-            printf("outputting object\n");
             output_type(current_module, output, decl->object_type);
             fprintf(output, " %s", decl->name.c_str());
             if (decl->object_type->array_dimensions.size()) {
@@ -82,7 +80,6 @@ protected:
                 }
             }
         } else {
-            printf("outputting typedef\n");
             if (decl->object_type->type == TYPE_RENAME) {
                 fprintf(output, "typedef %s ", decl->name.c_str());
                 output_type(current_module, output, decl->object_type->rename_of);
@@ -97,16 +94,12 @@ protected:
     }
 
     void output_declaration(Crank_Module& current_module, FILE* output, Crank_Declaration* decl) {
-        printf("outputting decl\n");
         if (decl->is_externally_defined) {
             fprintf(output, "extern \"C\" {\n");
         }
 
         if (decl->decl_type == DECL_OBJECT) {
-            printf("outputting object\n");
-
             if (!decl->is_constant) {
-                
                 output_type(current_module, output, decl->object_type);
 
                 if (decl->is_externally_defined && decl->extern_definition.linkage_name != "") {
@@ -148,7 +141,6 @@ protected:
                 }
             }
         } else {
-            printf("outputting typedef\n");
             switch (decl->object_type->type) {
                 case TYPE_RENAME: { // typedef of the normal kind
                     fprintf(output, "typedef ");
@@ -197,7 +189,6 @@ protected:
             assert(!decl->is_externally_defined && "An externally defined function should not have a definition");
             assert(decl->decl_type == DECL_OBJECT && "???");
             output_type(current_module, output, decl->object_type);
-            printf("I am %s\n", decl->name.c_str());
             fprintf(output, " %s", decl->name.c_str());
 
             // array types are confusing for functions! LOL
@@ -247,7 +238,6 @@ protected:
                     }
                 }
             }
-            printf("finish output body?\n");
         }
     }
 

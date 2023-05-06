@@ -24,7 +24,7 @@ use multiple modules primarily.
 - **Automatic pointer dereferencing!**
 
 ## Wishlist/Later
-- Multiple modules
+- Multiple modules (right now I'm just doing it like include)
 - (maybe) anonymous functions
 - RTTI?
 - Array programming

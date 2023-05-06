@@ -9,20 +9,31 @@ typedef abc: struct {
         a: def;
         b: def[2][2];
         d: int[2];
-        c: def[];
+        e: int[2];
+        c: def[3];
+        f: int;
 };
 
-test: void(x: abc*) {
+test: void(x: abc) {
       //x.c.b; (SHOULD ERROR!)
-      //x.d[0];
+      //x.d;
 };
 
 main: int(argc: int, argv: strlit[]) {
       d: abc;
+      e: abc[2];
+      i: int;
+      i;
+      //d.d[0];
+      d.e[0].a;
+      //d.c[0].b;
+      //e.f;
+      //d.b[0][0].b;
+      //e.a;
       //d.a;
-      d.b[0].in;
+      //d.d;
       //d.b[0].b;
-      //d.b[0][0].in[1].in;
-      test(&d);
+      d.b[0][0].in[0].in;
+      // test(&d);
       //d.a.b;
 };

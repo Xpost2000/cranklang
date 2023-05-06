@@ -990,19 +990,7 @@ Crank_Type* get_unary_expression_type(Crank_Expression* expression, bool strict=
     auto  type  = get_expression_type(expression->unary.value, strict);
 
     assert(type && "Expression should have a type");
-    if (expression->operation == OPERATOR_ARRAY_INDEX) {
-        auto one_less_array_dimension = type->array_dimensions;
-        one_less_array_dimension.pop_back();
-
-        return lookup_type(
-            type->name,
-            one_less_array_dimension,
-            type->call_parameters,
-            type->is_function,
-            type->is_variadic,
-            type->pointer_depth
-        );
-    } else if (expression->operation == OPERATOR_DEREFERENCE)  {
+    if (expression->operation == OPERATOR_DEREFERENCE)  {
         assert(type->pointer_depth > 0 && "You cannot dereference a plain value?");
         return lookup_type(
             type->name,
@@ -1029,6 +1017,22 @@ Crank_Type* get_unary_expression_type(Crank_Expression* expression, bool strict=
 // we need to check what the full expression is.
 Crank_Type* get_binary_expression_type(Crank_Expression* expression, bool strict=false) {
     auto& binary = expression->binary;
+
+    if (expression->operation == OPERATOR_ARRAY_INDEX) {
+        auto  type  = get_expression_type(expression->binary.first, strict);
+        auto one_less_array_dimension = type->array_dimensions;
+        one_less_array_dimension.pop_back();
+
+        return lookup_type(
+            type->name,
+            one_less_array_dimension,
+            type->call_parameters,
+            type->is_function,
+            type->is_variadic,
+            type->pointer_depth
+        );
+    }
+
     auto lhs = get_expression_type(binary.first, strict);
     auto rhs  = get_expression_type(binary.second, strict);
 
@@ -1819,6 +1823,10 @@ Error<Crank_Value> read_value(Tokenizer_State& tokenizer) {
                 tokenizer.read_next();
                 assert(tokenizer.read_next().type == TOKEN_LEFT_CURLY_BRACE && "A struct literal looks like structname: {initializer}");
                 value.value_type = VALUE_TYPE_LITERAL;
+
+                //NOTE: if this type does not exist, we'll have to mark it for later.
+                // ?, but how do I read type names that now may or may not be "qualified"?
+                // oh boy.
                 value.type = lookup_type(first.string);
                 _debugprintf("Trying to lookup struct : \"%.*s\"\n", unwrap_string_view(first.string));
                 assert(value.type && "This struct type should exist!");
@@ -2383,10 +2391,52 @@ struct Crank_Static_Analysis_Context {
     }
 };
 
+Crank_Type* try_to_find_member_of(Crank_Static_Analysis_Context& context, Crank_Type* type_of_lhs, std::string name) {
+    _debugprintf("Type searching from: %s\n", type_of_lhs->name.c_str());
+    _debugprintf("Looking for the member named: %s\n", name.c_str());
+    if (type_of_lhs->type == TYPE_ENUMERATION) {
+        if (type_of_lhs->enum_members.size()) {
+            for (auto& member : type_of_lhs->enum_members) {
+                if (member.name == name) {
+                    return get_base_type(type_of_lhs);
+                }
+            }
+        }
+    } else {
+        if (type_of_lhs->members.size()) {
+            for (auto& member : type_of_lhs->members) {
+                if (member.name == name) {
+                    return member.object_type;
+                }
+            }
+        }
+    }
+
+    return nullptr;
+}
+
+Crank_Expression* follow_expression_to_value_root(Crank_Expression* cursor) {
+    if (cursor->type == EXPRESSION_BINARY) {
+        Crank_Expression* leaf_node = cursor->binary.first;
+
+        while (leaf_node->type != EXPRESSION_VALUE) {
+            assert(leaf_node->type != EXPRESSION_UNARY && "this should not happen in the middle of a property access...");
+            leaf_node = leaf_node->binary.first;
+        }
+
+        return leaf_node;
+    } else if (cursor->type == EXPRESSION_UNARY) {
+        return cursor->unary.value;
+    } else if (cursor->type == EXPRESSION_VALUE) {
+        return cursor;
+    }
+
+    return nullptr;
+}
+
 // This is a separate pass that fixes variable references
 // inside of expressions to make sure that AST is "complete".
 // constants should already be evaluated since they are trivial
-// NOTE: requires context
 void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expression* expression) {
     if (!expression) return;
     // the real type magic is here.
@@ -2394,13 +2444,14 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
         case EXPRESSION_VALUE: {
             auto& value = expression->value;
             if (value.value_type == VALUE_TYPE_LITERAL) {
+                // only array literals are scary.
+                // object literals should already be typed by this stage...
+                // NOTE: well... It's possible they may not be because of exports.
                 assert(value.array_elements.size() == 0 && "Do not known how to handle array literals yet!");
-                assert(value.call_parameters.size() == 0 && "Do not know how to handle call parameters yet!");
                 // otherwise nothing to worry about.
             } else {
                 _debugprintf("Trying to resolve symbol.");
-                assert(value.type == nullptr &&
-                       "Unless I'm crazy, all symbols should have no types yet. That defeats the purpose of doing this step.");
+                assert(value.type == nullptr && "Unless I'm crazy, all symbols should have no types yet. That defeats the purpose of doing this step.");
                 // this is a symbol which is the part I actually care about
                 auto& symbol_name = value.symbol_name;
                 // first look it up from existing declarations
@@ -2408,30 +2459,12 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
 
                 // check module declarations
                 if (!resolved) {
-                    // NOTE: for now I'll assume modules are declared at global scope
-                    // since Crank_Types assume a single name and are not "package" scoped
-                    // or anything yet.
+                    /*
+                      That giant comment is pointless now...
+                      I can just do it in the PROPERTY_ACCESS section below.
 
-                    // I can make the following assumptions as I don't want Crank to balloon out of control
-                    // in terms of complexity:
-                    //   - Only modules can be used to scope types
-                    //   - There are no nested types.
-                    // those two assumptions make the language simple enough that I can do stuff with that.
-                    // NOTE: Modules can use their own fully qualified names for their declarations if they want
-                    // but in the current module with evaluating stuff we can safely assume that they imply using
-                    // their own module or something like that.
-                    // how would I do nested modules though?
-
-                    // context will include "access" chains
-                    // when faced with a property access so I can resolve
-                    // "members" of stuff
-
-                    // if access chain is empty we will just check modules
-                    // for typedefs or globals?
-
-                    // if there is an access chain we need to figure out what
-                    // the access is coming from...
-                    // should be fine since I will place the type of the object
+                      This is just for global scope stuff.
+                    */
                     for (auto& module : context.modules) {
                         for (auto& decl : module.decls) {
                             if (decl.name == symbol_name) {
@@ -2467,6 +2500,7 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
                     }
                 }
 
+                // TODO: typecheck against official definition
                 if (value.is_function_call) {
                     // also check against the other stuff
                     _debugprintf("Parsing function parameters for types");
@@ -2476,8 +2510,6 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
                         printf("\n");
                         resolve_expression_types(context, call_param);
                     }
-
-                    // TODO: typecheck against official definition
                 }
 
                 // better error message / no assertion
@@ -2490,10 +2522,8 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
         case EXPRESSION_BINARY: {
             resolve_expression_types(context, expression->binary.first);
 
+            /* Okay turns out this is really complicated let me linearize it. */
             if (expression->operation == OPERATOR_PROPERTY_ACCESS) {
-                _debugprintf("PROPERTY ACCESS EXPRESSION");
-                _debug_print_expression_tree(expression); printf("\n");
-                _debugprintf("END PROPERTY ACCESS EXPRESSION");
                 auto cursor = expression->binary.second;
                 auto type_of_lhs = follow_typedef_chain(get_expression_type(expression->binary.first));
 
@@ -2509,73 +2539,51 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
                  * a.b.c[0][1][2], I'm trying to resolve c, so I have to sift through all the array accesses until I get to
                  * the symbol.
                  */
-                while (cursor && resolved) { // we will try to traverse until I can no longer traverse
-                    _debugprintf("TYPE_OF_LHS_ID: %d (%s)", type_of_lhs->type, type_of_lhs->name.c_str());
+                Crank_Expression* last_leaf = nullptr;
+                while (cursor && resolved) {
+                    // we will try to traverse until I can no longer traverse
+                    _debugprintf("TYPE_OF_LHS_ID: %d (%s) (arrsz %d, ptrdepth %d members %d enum members %d)",
+                                 type_of_lhs->type,
+                                 type_of_lhs->name.c_str(),
+                                 type_of_lhs->array_dimensions.size(),
+                                 type_of_lhs->pointer_depth,
+                                 type_of_lhs->members.size(),
+                                 type_of_lhs->enum_members.size());
 
-                    Crank_Expression* leaf_node = nullptr;
-                    if (cursor->type == EXPRESSION_BINARY) {
-                        leaf_node = cursor->binary.first;
+                    Crank_Expression* leaf_node = follow_expression_to_value_root(cursor);
 
-                        while (leaf_node->type != EXPRESSION_VALUE) {
-                            assert(leaf_node->type != EXPRESSION_UNARY && "this should not happen in the middle of a property access...");
-                            leaf_node = leaf_node->binary.first;
-                        }
-                    } else if (cursor->type == EXPRESSION_UNARY) {
-                        leaf_node = cursor->unary.value;
-                    } else if (cursor->type == EXPRESSION_VALUE) {
-                        leaf_node = cursor;
-                    }
-
-                    assert(leaf_node && leaf_node->type == EXPRESSION_VALUE && "should have something to test");
-                    {
-                        bool found_match = false;
-
-                        // different for enum and normal records since enums are smaller
-                        // but operate the same way. No members = instant match.
-                        if (type_of_lhs->type == TYPE_ENUMERATION) {
-                            if (type_of_lhs->enum_members.size()) {
-                                for (auto& member : type_of_lhs->enum_members) {
-                                    if (member.name == leaf_node->value.symbol_name) {
-                                        leaf_node->value.type = get_base_type(type_of_lhs);
-                                        found_match = true;
-                                        break;
-                                    }
-                                }
-                            } else {
-                                found_match = true;
-                            }
-                        } else {
-                            if (type_of_lhs->members.size()) {
-                                for (auto& member : type_of_lhs->members) {
-                                    if (member.name == leaf_node->value.symbol_name) {
-                                        leaf_node->value.type = member.object_type;
-                                        found_match = true;
-                                        break;
-                                    }
-                                }
-                            } else {
-                                // if it gets to this case, it was probably an array access loop
-                                // which means our newlhs is going to be the same as the current cursor.
-                                // we can conclude we passed
-                                found_match = true;
-                            }
-                        }
-
-                        if (found_match == false) resolved = false;
-                    }
-
-                    if (cursor->type == EXPRESSION_BINARY) {
-                        type_of_lhs = follow_typedef_chain(get_expression_type(cursor->binary.first));
-                        if (cursor->operation == OPERATOR_PROPERTY_ACCESS) {
-                            cursor = cursor->binary.second;
-                        } else {
-                            cursor = cursor->binary.first;
-                        }
+                    if (last_leaf == leaf_node) {
+                        _debugprintf("Made no progress. Let's stop.");
+                        resolved = true;
                     } else {
-                        cursor = nullptr;
+                        assert(leaf_node && leaf_node->type == EXPRESSION_VALUE && "should have something to test");
+                        {
+                            Crank_Type* leaf_node_new_type = try_to_find_member_of(context, type_of_lhs, leaf_node->value.symbol_name);
+
+                            if (leaf_node_new_type) {
+                                leaf_node->value.type = leaf_node_new_type;
+                            } else {
+                                resolved = false;
+                            }
+                        }
+
+                        if (cursor->type == EXPRESSION_BINARY) {
+                            type_of_lhs = follow_typedef_chain(get_expression_type(cursor->binary.first));
+                            last_leaf   = leaf_node;
+                            if (cursor->operation == OPERATOR_PROPERTY_ACCESS) {
+                                cursor = cursor->binary.second;
+                            } else {
+                                cursor = cursor->binary.first;
+                            }
+                        } else {
+                            cursor = nullptr;
+                        }
                     }
                 }
 
+                if (!resolved) {
+                    fprintf(stderr, "Unable to find \"%s\" in type \"%s\"!\n", last_leaf->value.symbol_name.c_str(), type_of_lhs->name.c_str());
+                }
                 assert(resolved && "Unable to resolve member property!");
             } else {
                 resolve_expression_types(context, expression->binary.second);
