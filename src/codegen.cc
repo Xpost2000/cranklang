@@ -206,9 +206,11 @@ protected:
             fprintf(output, ".");
             output_expression(current_module, output, expression->binary.second);
         } else {
+            fprintf(output, "(");
             output_expression(current_module, output, expression->binary.first);
             fprintf(output, "%s", Crank_Expression_Operator_string_table[expression->operation]);
             output_expression(current_module, output, expression->binary.second);
+            fprintf(output, ")");
         }
     }
 };

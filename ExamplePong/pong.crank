@@ -31,6 +31,7 @@ BeginDrawing: extern void();
 EndDrawing: extern void();
 fmt: extern("TextFormat") char*(text: char*, ...);
 DrawText: extern void(text: char*, posX: int, posY: int, fontSize: int, color: Color);
+MeasureText: extern int(text: char*, fontSize: int);
 
 typedef Key : enum i32 {
     KEY_NULL            = 0,        // Key: NULL, used for no key pressed
@@ -176,6 +177,8 @@ typedef GameState: struct {
         quit: bool = false;
 };
 
+DEFAULT_FONT_SIZE: int = 32;
+
 main: int(argc: int, argv: strlit[]) {
       game_state: GameState;
 
@@ -188,14 +191,16 @@ main: int(argc: int, argv: strlit[]) {
             if IsKeyPressed(Key.KEY_F1) game_state.quit = true;
 
             BeginDrawing();
+            PADDING: int = 16;
             {
                 // interesting review of precedence order. Might need to adjust something...
                 // hopefully won't break everything later...
                 // or I might just keep this.
-                DrawText(fmt("Player 1: %d", game_state.scores[0]), 0, 0, 32, Color: {255, 0, 0, 255});
+                DrawText(fmt("Player 1: %d", game_state.scores[0]), PADDING, 0, DEFAULT_FONT_SIZE, Color: {255, 0, 0, 255});
                 {
                  // left align this text
-                 DrawText(fmt("Player 2: %d", game_state.scores[1]), 1024-200, 0, 32, Color: {0, 0, 255, 255});
+                 text: char* = fmt("Player 2: %d", game_state.scores[1]);
+                 DrawText(text, 1024 - (MeasureText(text, DEFAULT_FONT_SIZE) + PADDING), 0, DEFAULT_FONT_SIZE, Color: {0, 0, 255, 255});
                 }
             }
             EndDrawing();
