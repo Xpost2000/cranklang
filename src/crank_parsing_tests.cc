@@ -408,10 +408,91 @@ void type_inference_test() {
     //?
 }
 
+void parse_property_access() {
+    {
+        char* test_parse =
+            R"(
+test.x.y.z;
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(t);
+        _debug_print_statement(t);
+    }
+    {
+        char* test_parse =
+            R"(
+test.x.y.z[0];
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(t);
+        _debug_print_statement(t);
+    }
+    {
+        char* test_parse =
+            R"(
+test.x.z;
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(t);
+        _debug_print_statement(t);
+    }
+    {
+        char* test_parse =
+            R"(
+test.x.z[0];
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(t);
+        _debug_print_statement(t);
+    }
+    {
+        char* test_parse =
+            R"(
+test.z;
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(t);
+        _debug_print_statement(t);
+    }
+    {
+        char* test_parse =
+            R"(
+test.z[0];
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(t);
+        _debug_print_statement(t);
+    }
+    {
+        char* test_parse =
+            R"(
+test.z[0][1];
+)";
+        printf("Parsing: %s\n", test_parse);
+        Tokenizer_State tokenizer(test_parse);
+        auto t = parse_any_statement(tokenizer);
+        assert(t);
+        _debug_print_statement(t);
+    }
+}
+
 void run_all_tests() {
     typecheck_matching();
     type_inference_test();
     parse_statements();
     // parse_object_literal();
     parse_declaration();
+    parse_property_access();
 }

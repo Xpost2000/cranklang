@@ -1,0 +1,28 @@
+typedef efg: struct {
+        in: int;
+};
+typedef def: struct {
+        b: int;
+        in: efg[3]; 
+};
+typedef abc: struct {
+        a: def;
+        b: def[2][2];
+        d: int[2];
+        c: def[];
+};
+
+test: void(x: abc*) {
+      //x.c.b; (SHOULD ERROR!)
+      //x.d[0];
+};
+
+main: int(argc: int, argv: strlit[]) {
+      d: abc;
+      //d.a;
+      d.b[0].in;
+      //d.b[0].b;
+      //d.b[0][0].in[1].in;
+      test(&d);
+      //d.a.b;
+};

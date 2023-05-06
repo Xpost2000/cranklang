@@ -469,9 +469,13 @@ Crank_Type* lookup_type(
             // register the derivative type.
             auto base_type             = lookup_type(name);
             result                     = register_new_type(name, base_type->type, array_dimensions, call_parameters, is_function, is_variadic, pointer_depth);
-            result->enum_members       = base_type->enum_members;
-            result->enum_internal_type = base_type->enum_internal_type;
-            result->members            = base_type->members;
+
+            // NOTE: arrays should not share the normal values
+            if (array_dimensions.size() == 0) {
+                result->enum_members       = base_type->enum_members;
+                result->enum_internal_type = base_type->enum_internal_type;
+                result->members            = base_type->members;
+            }
         }
     }
 
@@ -2486,57 +2490,91 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
         case EXPRESSION_BINARY: {
             resolve_expression_types(context, expression->binary.first);
 
-            /*
-              I don't know why I spent so long thinking about this, but I realized the beauty
-              of this fact is that in reality, the second expression in a binary expression **must**
-              be a trivial value such as an expression as it is the last in a nest.
-
-              Property accesses are a special case where it's even simpler because a valid property access
-              must have a symbol for it's right hand side.
-             */
             if (expression->operation == OPERATOR_PROPERTY_ACCESS) {
-                // NOTE:
-                // breaks when doing stuff like
-                // a.b[0] = 2;
-                // probably because it's compiled as
-                // (property-access a (array-access b 0))
-                // so it's not as trivial but it's not too big of a deal
-                // TODO: investigate later. This is a weird issue but it's not a deal breaker.
-
-                // to handle the property access case I will reach the "leaf" of the right expression;
-                auto leaf_node = expression->binary.second;
-                while (leaf_node && leaf_node->type == EXPRESSION_BINARY) {
-                    leaf_node = leaf_node->binary.first;
-                }
-                assert(leaf_node->value.value_type == VALUE_TYPE_SYMBOL && "Property accesses can only be done on literals!");
-                // resolve the special case
-
+                _debugprintf("PROPERTY ACCESS EXPRESSION");
+                _debug_print_expression_tree(expression); printf("\n");
+                _debugprintf("END PROPERTY ACCESS EXPRESSION");
+                auto cursor = expression->binary.second;
                 auto type_of_lhs = follow_typedef_chain(get_expression_type(expression->binary.first));
-                assert(type_of_lhs->type == TYPE_UNION ||
-                       type_of_lhs->type == TYPE_RECORD ||
-                       type_of_lhs->type == TYPE_ENUMERATION && "These are the only types with members");
 
-                bool resolved = false;
+                bool resolved = true; // assume vacuously true
 
-                // this weird separation is deliberate because enums have all members with the same type
-                // every other thing does not
-                if (type_of_lhs->type == TYPE_ENUMERATION) {
-                    for (auto& member : type_of_lhs->enum_members) {
-                        if (member.name == leaf_node->value.symbol_name) {
-                            leaf_node->value.type = get_base_type(type_of_lhs);
-                            resolved = true;
-                            break;
+                /*
+                 * So for property accesses, the main goal is to try and figure out the left hand side
+                 * first, and then search for the property on the right side.
+                 *
+                 * NOTE: our goal is to resolve the symbol property access. IE: for an array access we don't need to know
+                 * the result of the full expression. Solely the symbol I'm looking at:
+                 *
+                 * a.b.c[0][1][2], I'm trying to resolve c, so I have to sift through all the array accesses until I get to
+                 * the symbol.
+                 */
+                while (cursor && resolved) { // we will try to traverse until I can no longer traverse
+                    _debugprintf("TYPE_OF_LHS_ID: %d (%s)", type_of_lhs->type, type_of_lhs->name.c_str());
+
+                    Crank_Expression* leaf_node = nullptr;
+                    if (cursor->type == EXPRESSION_BINARY) {
+                        leaf_node = cursor->binary.first;
+
+                        while (leaf_node->type != EXPRESSION_VALUE) {
+                            assert(leaf_node->type != EXPRESSION_UNARY && "this should not happen in the middle of a property access...");
+                            leaf_node = leaf_node->binary.first;
                         }
+                    } else if (cursor->type == EXPRESSION_UNARY) {
+                        leaf_node = cursor->unary.value;
+                    } else if (cursor->type == EXPRESSION_VALUE) {
+                        leaf_node = cursor;
                     }
-                } else {
-                    for (auto& member : type_of_lhs->members) {
-                        if (member.name == leaf_node->value.symbol_name) {
-                            leaf_node->value.type = member.object_type;
-                            resolved = true;
-                            break;
+
+                    assert(leaf_node && leaf_node->type == EXPRESSION_VALUE && "should have something to test");
+                    {
+                        bool found_match = false;
+
+                        // different for enum and normal records since enums are smaller
+                        // but operate the same way. No members = instant match.
+                        if (type_of_lhs->type == TYPE_ENUMERATION) {
+                            if (type_of_lhs->enum_members.size()) {
+                                for (auto& member : type_of_lhs->enum_members) {
+                                    if (member.name == leaf_node->value.symbol_name) {
+                                        leaf_node->value.type = get_base_type(type_of_lhs);
+                                        found_match = true;
+                                        break;
+                                    }
+                                }
+                            } else {
+                                found_match = true;
+                            }
+                        } else {
+                            if (type_of_lhs->members.size()) {
+                                for (auto& member : type_of_lhs->members) {
+                                    if (member.name == leaf_node->value.symbol_name) {
+                                        leaf_node->value.type = member.object_type;
+                                        found_match = true;
+                                        break;
+                                    }
+                                }
+                            } else {
+                                // if it gets to this case, it was probably an array access loop
+                                // which means our newlhs is going to be the same as the current cursor.
+                                // we can conclude we passed
+                                found_match = true;
+                            }
                         }
+
+                        if (found_match == false) resolved = false;
                     }
-                } // if I find a module. Even better.
+
+                    if (cursor->type == EXPRESSION_BINARY) {
+                        type_of_lhs = follow_typedef_chain(get_expression_type(cursor->binary.first));
+                        if (cursor->operation == OPERATOR_PROPERTY_ACCESS) {
+                            cursor = cursor->binary.second;
+                        } else {
+                            cursor = cursor->binary.first;
+                        }
+                    } else {
+                        cursor = nullptr;
+                    }
+                }
 
                 assert(resolved && "Unable to resolve member property!");
             } else {
@@ -2611,6 +2649,7 @@ void resolve_all_module_types(Crank_Static_Analysis_Context& context) {
             }
 
             if (decl.object_type->is_function) {
+                printf("attempting to resolve function: %s\n", decl.name.c_str());
                 int size = context.declarations.size();
                 for (auto& function_param : decl.object_type->call_parameters) {
                     resolve_expression_types(context, function_param.expression);
