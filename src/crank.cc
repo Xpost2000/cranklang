@@ -2506,7 +2506,6 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
                 // to handle the property access case I will reach the "leaf" of the right expression;
                 auto leaf_node = expression->binary.second;
                 while (leaf_node && leaf_node->type == EXPRESSION_BINARY) {
-                    assert(leaf_node->operation == OPERATOR_ARRAY_INDEX && "This should be the only case I see.");
                     leaf_node = leaf_node->binary.first;
                 }
                 assert(leaf_node->value.value_type == VALUE_TYPE_SYMBOL && "Property accesses can only be done on literals!");
