@@ -22,9 +22,12 @@ typedef Color: struct {
 
 // RAYLIB START
 InitWindow: extern void(width: int, height: int, title: char*);
+WindowShouldClose: extern bool();
+SetTargetFPS: extern void(fps: int);
 IsKeyPressed: extern bool(key: int);
 IsKeyReleased: extern bool(key: int);
 IsKeyUp: extern bool(key: int);
+IsKeyDown: extern bool(key: int);
 IsKeyPressed: extern bool(key: int);
 CloseWindow: extern void();
 BeginDrawing: extern void();
@@ -32,6 +35,9 @@ EndDrawing: extern void();
 fmt: extern("TextFormat") char*(text: char*, ...);
 DrawText: extern void(text: char*, posX: int, posY: int, fontSize: int, color: Color);
 MeasureText: extern int(text: char*, fontSize: int);
+DrawRectangle: extern void(posX: int, posY: int, width: int, height: int, color: Color);
+ClearBackground: extern void(color: Color);
+GetFrameTime: extern f32();
 
 typedef Key : enum i32 {
     KEY_NULL            = 0,        // Key: NULL, used for no key pressed
@@ -158,20 +164,34 @@ typedef PaddleSide : enum u8 {
 };
 
 typedef Paddle: struct {
-    //side: PaddleSide;
     side: PaddleSide = PaddleSide.Left;
-    // oh, I know why this doesn't work.
 
-    x: int = 0;
-    y: int = 0;
-    w: int = 0;
-    h: int = 0;
+    x: f32 = 0;
+    y: f32 = 0;
+    w: f32 = 0;
+    h: f32 = 0;
 };
+
+typedef Vec2: struct {
+        x: f32 = 0;
+        y: f32 = 0;
+};
+
+typedef Ball: struct {
+        x: f32 = 0;
+        y: f32 = 0;
+        radius: f32 = 25;
+        speed: f32 = 5;
+        direction: Vec2 = Vec2: {1, 0};
+};
+
+printf: extern int(txt: char*, ...);
 
 typedef GameState: struct {
         // arrays cannot be default init as of this moment lol
         // should be a quickfix
         paddles: Paddle[2]; 
+        ball: Ball;
         scores:  int[2];
         quit: bool = false;
 };
@@ -181,6 +201,7 @@ typedef GameState: struct {
 DEFAULT_FONT_SIZE: int = 32;
 PADDING_X: int = 22;
 PADDING_Y: int = 22;
+PONG_PADDLE_SPEED: int = 250;
 
 draw_ui: void(state: GameState*) {
     DrawText(fmt("Player 1: %d", state.scores[0]), PADDING_X, PADDING_Y, DEFAULT_FONT_SIZE, Color: {255, 0, 0, 255});
@@ -192,20 +213,87 @@ draw_ui: void(state: GameState*) {
     }
 };
 
+draw_paddle: void(paddle: Paddle*) {
+    color: Color;
+
+    if paddle.side == PaddleSide.Left {
+       color = Color: {255, 0, 0, 255};
+    } else {
+       color = Color: {0, 0, 255, 255};
+    }
+
+    DrawRectangle(paddle.x, paddle.y, paddle.w, paddle.h, color);             
+};
+
+draw_ball: void (ball: Ball*) {
+    DrawRectangle(ball.x, ball.y, ball.radius, ball.radius, Color: {255,255,255,255});             
+};
+
+clamp_paddle_position: void(paddle: Paddle*) {
+  if paddle.y <= 0 {
+    paddle.y = 0;
+  }
+  else if paddle.y + paddle.h >= 768 {
+    paddle.y = 768 - paddle.h;
+  }
+};
+
+reset_ball_position: void(state: GameState*) {
+    ball: Ball* = &state.ball;
+    state.ball.x = 512 + state.ball.radius/2;
+    state.ball.y = 384 + state.ball.radius/2;
+};
+
 main: int(argc: int, argv: strlit[]) {
       game_state: GameState;
 
       game_state.scores[0] = 0;
       game_state.scores[1] = 0;
 
-      InitWindow(1024, 768, "Hello Cranky Pong!");
+      game_state.paddles[0].side = PaddleSide.Left;
+      game_state.paddles[0].w = game_state.paddles[1].w = 30;
+      game_state.paddles[0].h = game_state.paddles[1].h = 60;
 
-      while !game_state.quit {
-            if IsKeyPressed(Key.KEY_F1) game_state.quit = true;
+      PONG_PADDLE_MARGIN: int = 45;
+      game_state.paddles[0].x = 0 + PONG_PADDLE_MARGIN;
+      game_state.paddles[1].x = 1024 - (game_state.paddles[1].w + PONG_PADDLE_MARGIN);
+
+      game_state.paddles[1].side = PaddleSide.Right;
+      game_state.paddles[1].y = game_state.paddles[0].y = 768/2 - game_state.paddles[0].h/2;
+
+      InitWindow(1024, 768, "Hello Cranky Pong!");
+      SetTargetFPS(60);
+
+      reset_ball_position(&game_state);
+
+      while !game_state.quit && !WindowShouldClose() {
+            dt: f32 = GetFrameTime();
+
+            if IsKeyPressed(Key.KEY_Q) game_state.quit = true;
 
             BeginDrawing();
 
+            ClearBackground(Color: {});
+
             draw_ui(&game_state);
+            draw_paddle(&game_state.paddles[0]);
+            draw_paddle(&game_state.paddles[1]);
+            draw_ball(&game_state.ball);
+
+            {
+                paddle_target: Paddle* = &game_state.paddles[0];
+
+                if IsKeyDown(Key.KEY_DOWN) || IsKeyDown(Key.KEY_S) {
+                   paddle_target.y += (dt * PONG_PADDLE_SPEED);
+                }
+
+                if IsKeyDown(Key.KEY_UP) || IsKeyDown(Key.KEY_W) {
+                   paddle_target.y -= (dt * PONG_PADDLE_SPEED);
+                }
+            }
+
+            clamp_paddle_position(&game_state.paddles[0]);
+            clamp_paddle_position(&game_state.paddles[1]);
             
             EndDrawing();
       }
