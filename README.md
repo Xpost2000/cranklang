@@ -3,8 +3,8 @@
 A simple alternative C language that transpiles.
 
 **With no formal compiler education, I jump into writing a compiler, which turns out reasonably well all things considered.**
-**NOTE the language is deliberately simple because this is my first actual programming language implemented effectively blind!**
-**If I ever make a future language, I'll probably read the Dragon Book or take a look at LCC or something!**
+**NOTE the language is simple because this is my first actual programming language implemented effectively blind!**
+**If I ever make a future language, I'll probably read the Dragon Book or take a look at LCC or something! Since there's probably a lot of things I shouldn't have done**
 
 The codebase is kind of ugly as it evolves slightly, but it's reasonably okay to refactor compared to Legends anyways.
 
