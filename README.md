@@ -14,8 +14,9 @@ The codebase is kind of ugly as it evolves slightly, but it's reasonably okay to
 - Handmade statically typed language that compiles to C++.
 - Handmade recursive descent parser
 - Constant folding
+- **Multiple file through C style #include**, although there is automatic guarding against multiple include.
 - Expression parsing and correct operator precedence order.
-- *A simple FFI which allows you to use C functions*
+- **A simple FFI which allows you to use C functions**
 - Out of order function declaration
 - Record types such as unions and structs
 - Scoped enums.
@@ -56,11 +57,15 @@ There are no dependencies other than a working C++ 11 compiler.
 
 ## Example programs
 
-In the repository there are a few sample programs. Some of them are implementation of classic
-games. Likely Pong and Space Invaders, since the programming language is the main project. Not the
-games.
+In the repository there are some test programs, although there is one serious example program.
 
-The games will require additional dependencies such as raylib or SDL2.
+In ```ExamplePong```, there is a two player game of Pong implemented in Crank with the help
+of [raylib](https://github.com/raysan5/raylib). The game tries to use as many features of the language
+as possible, and uses multiple files.
+
+Since Crank doesn't include operating system awareness right now, building file expects Windows for now.
+Although since Crank internally compiles to C++ it should be very easy to figure out how to change the build file
+to work on other operating systems.
 
 ## Usage
 
