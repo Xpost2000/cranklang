@@ -23,9 +23,9 @@ main: int(argc: int, argv: strlit[]) {
       d: abc;
       e: abc[2];
       i: int;
-      i;
+      d.e[0] = 3;
       //d.d[0];
-      d.e[0].a;
+      //d.e[0].a;
       //d.c[0].b;
       //e.f;
       //d.b[0][0].b;
@@ -33,7 +33,7 @@ main: int(argc: int, argv: strlit[]) {
       //d.a;
       //d.d;
       //d.b[0].b;
-      d.b[0][0].in[0].in;
+      //d.b[0][0].in[0].in;
       // test(&d);
       //d.a.b;
 };

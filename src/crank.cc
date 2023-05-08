@@ -2554,6 +2554,7 @@ void resolve_expression_types(Crank_Static_Analysis_Context& context, Crank_Expr
 
                     if (last_leaf == leaf_node) {
                         _debugprintf("Made no progress. Let's stop.");
+                        cursor = nullptr;
                         resolved = true;
                     } else {
                         assert(leaf_node && leaf_node->type == EXPRESSION_VALUE && "should have something to test");
