@@ -55,6 +55,37 @@ to compile the project this time. It's not anything special, all you do is run m
 
 There are no dependencies other than a working C++ 11 compiler.
 
+## Sample Program
+
+```
+printf: extern int(fmt: char*, ...);
+
+// Yes the semicolon is not optional! It's to make the language generally
+// more consistent.
+typedef Animal: struct {
+    name: char* = "Animal"; // comma or semicolon is okay. Up to you.
+    health: int = 500,
+    speed: int = 300,
+};
+
+print_animal: void(animal: Animal*) {
+    // automatic dereferencing when accessing properties!
+    // no more ->!
+    printf("%s: %d: %d\n", animal.name, animal.health, animal.speed);
+}
+
+main: int(argc: int, argv: strlit[]) {
+    animal: Animal = Animal: { "Dog", 100, 100 };
+    print_animal(&animal);
+
+    for i: int = 0; i < 10; i += 1 { // language does not have post-increment or pre-increment!
+        printf("%d number\n", i);
+    }
+
+    printf("Hello World!\n");
+};
+```
+
 ## Example programs
 
 In the repository there are some test programs, although there is one serious example program.
@@ -66,6 +97,10 @@ as possible, and uses multiple files.
 Since Crank doesn't include operating system awareness right now, building file expects Windows for now.
 Although since Crank internally compiles to C++ it should be very easy to figure out how to change the build file
 to work on other operating systems.
+
+Here's the pong game in action!
+
+![PrinnyMarkHotReloadingImageGif!](./media/1.gif)
 
 ## Usage
 
