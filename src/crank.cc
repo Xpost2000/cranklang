@@ -41,11 +41,6 @@
   NOTE: when I add multiple modules, all Crank_Declarations are going to specify which module they
   come from.
 
-  NOTE: Crank is not going to support methods. It's not part of the MO, although it's not additionally
-  complicated...
-  NOTE: Crank is not supporting multiple declarations either. It probably could with slight changes to the parser
-  but it's not something I usually do or like...
-
   NOTE: I use a lot of megastructs since it's simpler, but inheritance is possible to reduce
   size of structs. But this probably doesn't matter too much in a lot of cases I need. Besides it's
   quicker for me to learn how to write a compiler this way anyways.
@@ -71,7 +66,7 @@ enum Crank_Types {
       THESE ARE ORDERED SPECIFICALLY TO IMPLY THE IMPLICIT
       TYPE PROMOTION ORDER.
     */
-    TYPE_BOOLEAN, // NOT IMPLEMENTED?
+    TYPE_BOOLEAN,
     TYPE_UNSIGNEDINTEGER8,
     TYPE_UNSIGNEDINTEGER16,
     TYPE_UNSIGNEDINTEGER32,
@@ -83,15 +78,14 @@ enum Crank_Types {
     TYPE_FLOAT,
     TYPE_DOUBLE,
     TYPE_STRINGLITERAL,
-    TYPE_RECORD, // NOT FULLY IMPLEMENTED
+    TYPE_RECORD,
 
-    /* Not implemented yet! */
     TYPE_UNION,
     TYPE_ENUMERATION,
 
     // built in tagged union or algebraic data type
     TYPE_VARIANT,
-    /* Not impleemented yet! */
+    /* Not implemented yet! */
 
     TYPE_VOID, // NOT IMPLEMENTED
     TYPE_RENAME, // typedef, this doesn't really have much significance, so I might remove this.
@@ -2857,7 +2851,6 @@ int main(int argc, char** argv){
 
     if (module_names.size()) {
         // generated... now compile all the modules
-
         // I should try to detect the tool chain that someone might have.
         std::string compile_string = "g++ ";
         compile_string += " -o " + output_name + " ";
