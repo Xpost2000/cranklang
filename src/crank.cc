@@ -1337,6 +1337,7 @@ Crank_Expression* parse_factor(Tokenizer_State& tokenizer) {
     return result;
 }
 
+// TODO: check this in the future, operator order is slightly wrong
 Crank_Expression* parse_term(Tokenizer_State& tokenizer) {
     Crank_Expression* result = parse_factor(tokenizer);
 

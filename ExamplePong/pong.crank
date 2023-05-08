@@ -208,11 +208,13 @@ vec2_normalize: Vec2(a: Vec2) {
     return result;
 };
 
+BALL_MAX_SPEED: int = 600;
+BALL_DEFAULT_SPEED: int = 200;
 typedef Ball: struct {
         x: f32 = 0;
         y: f32 = 0;
         radius: f32 = 25;
-        speed: f32 = 5;
+        speed: f32 = BALL_DEFAULT_SPEED;
         direction: Vec2 = Vec2: {1, 0};
 };
 
@@ -255,6 +257,13 @@ draw_paddle: void(paddle: Paddle*) {
     DrawRectangle(paddle.x, paddle.y, paddle.w, paddle.h, color);             
 };
 
+paddle_intersect_ball: bool(paddle: Paddle*, ball: Ball*) {
+   return (ball.x < paddle.x + paddle.w) &&
+           (paddle.x < ball.x + ball.radius) &&
+           (ball.y < paddle.y + paddle.h) &&
+           (paddle.y < ball.y + ball.radius);
+};
+
 draw_ball: void (ball: Ball*) {
     DrawRectangle(ball.x, ball.y, ball.radius, ball.radius, Color: {255,255,255,255});             
 };
@@ -270,14 +279,24 @@ clamp_paddle_position: void(paddle: Paddle*) {
 
 reset_ball_position: void(state: GameState*) {
     ball: Ball* = &state.ball;
-    state.ball.x = 512 + state.ball.radius/2;
-    state.ball.y = 384 + state.ball.radius/2;
-
+    ball.x = 512 + ball.radius/2;
+    ball.y = 384 + ball.radius/2;
+    ball.speed = BALL_DEFAULT_SPEED;
 };
 
 random_int_ranged: s32(min: s32, max: s32) {
     range: s32 = max - min;
     return (rand() % range) + min;
+};
+
+ball_get_round_winner: i32(ball: Ball*) {
+   if ball.x <= 0.0 {
+      return 1;
+   } else if (ball.x + ball.radius) >= 1024 {
+      return 0;
+   }
+
+   return -1;
 };
 
 main: int(argc: int, argv: strlit[]) {
@@ -321,11 +340,21 @@ main: int(argc: int, argv: strlit[]) {
             {
                 paddle_target: Paddle* = &game_state.paddles[0];
 
-                if IsKeyDown(Key.KEY_DOWN) || IsKeyDown(Key.KEY_S) {
+                if IsKeyDown(Key.KEY_S) {
                    paddle_target.y += (dt * PONG_PADDLE_SPEED);
                 }
+                if IsKeyDown(Key.KEY_W) {
+                   paddle_target.y -= (dt * PONG_PADDLE_SPEED);
+                }
+            }
 
-                if IsKeyDown(Key.KEY_UP) || IsKeyDown(Key.KEY_W) {
+            {
+                paddle_target: Paddle* = &game_state.paddles[1];
+
+                if IsKeyDown(Key.KEY_DOWN) {
+                   paddle_target.y += (dt * PONG_PADDLE_SPEED);
+                }
+                if IsKeyDown(Key.KEY_UP) {
                    paddle_target.y -= (dt * PONG_PADDLE_SPEED);
                 }
             }
@@ -333,6 +362,50 @@ main: int(argc: int, argv: strlit[]) {
             clamp_paddle_position(&game_state.paddles[0]);
             clamp_paddle_position(&game_state.paddles[1]);
             
+            { // update the ball
+                ball: Ball* = &game_state.ball;
+                // move the ball
+                {
+                    ball.x += dt * ball.speed * ball.direction.x;
+                    ball.y += dt * ball.speed * ball.direction.y;
+                }
+
+                // check for ball bounces
+                {
+                    if
+                        paddle_intersect_ball(&game_state.paddles[0], ball) ||
+                        paddle_intersect_ball(&game_state.paddles[1], ball)
+                    {
+                       printf("Ball hit something\n");
+                       if ball.speed <= BALL_MAX_SPEED {
+                          ball.speed += 15;
+                       } else {
+                          ball.speed = BALL_MAX_SPEED;
+                       }
+                       
+                       ball.direction.x *= -1;
+                       ball.direction.y = random_int_ranged(-10, 10) / 10.0;
+                       ball.direction = vec2_normalize(ball.direction);
+                    }
+
+                    if (ball.y <= 0) || ((ball.y + ball.radius) >= 768) {
+                       ball.direction.y *= -1;
+                    }
+                }
+
+                // check for score intersections
+                {
+                    scorer: int = ball_get_round_winner(ball);
+                    if scorer != -1 {
+                       reset_ball_position(&game_state);
+                       game_state.scores[scorer] += 1;
+                       ball.direction.x = random_int_ranged(-1, 1);
+                       ball.direction.y = random_int_ranged(-10, 10) / 10.0;
+                       ball.direction = vec2_normalize(ball.direction);
+                    }
+                }
+            }
+
             EndDrawing();
       }
 

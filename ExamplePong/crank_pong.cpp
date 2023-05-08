@@ -127,11 +127,13 @@ Vec2  vec2(f32  x, f32  y);
 f32  vec2_length_sq(Vec2  a);
 f32  vec2_length(Vec2  a);
 Vec2  vec2_normalize(Vec2  a);
+int  BALL_MAX_SPEED = 600;
+int  BALL_DEFAULT_SPEED = 200;
 struct Ball { // struct name
 f32  x = 0;
 f32  y = 0;
 f32  radius = 25;
-f32  speed = 5;
+f32  speed = BALL_DEFAULT_SPEED;
 Vec2  direction = {
 1,0,}
 ;
@@ -148,10 +150,12 @@ int  PADDING_Y = 22;
 int  PONG_PADDLE_SPEED = 250;
 void  draw_ui(GameState * state);
 void  draw_paddle(Paddle * paddle);
+bool  paddle_intersect_ball(Paddle * paddle, Ball * ball);
 void  draw_ball(Ball * ball);
 void  clamp_paddle_position(Paddle * paddle);
 void  reset_ball_position(GameState * state);
 s32  random_int_ranged(s32  min, s32  max);
+i32  ball_get_round_winner(Ball * ball);
 int  crank_mainpoint_entry(int  argc, std::string  argv[]);
 Vec2  vec2(f32  x, f32  y)
 {
@@ -200,6 +204,10 @@ Color  color;
 );}
 
 DrawRectangle((*paddle).x, (*paddle).y, (*paddle).w, (*paddle).h, color);}
+bool  paddle_intersect_ball(Paddle * paddle, Ball * ball)
+{
+return (((((*ball).x<((*paddle).x+(*paddle).w))&&((*paddle).x<((*ball).x+(*ball).radius)))&&((*ball).y<((*paddle).y+(*paddle).h)))&&((*paddle).y<((*ball).y+(*ball).radius)));
+}
 void  draw_ball(Ball * ball)
 {
 DrawRectangle((*ball).x, (*ball).y, (*ball).radius, (*ball).radius, {
@@ -221,11 +229,27 @@ if ((((*paddle).y+(*paddle).h)>=768))
 void  reset_ball_position(GameState * state)
 {
 Ball * ball = (&(*state).ball);
-;((*state).ball.x=(512+((*state).ball.radius/2)));((*state).ball.y=(384+((*state).ball.radius/2)));}
+;((*ball).x=(512+((*ball).radius/2)));((*ball).y=(384+((*ball).radius/2)));((*ball).speed=BALL_DEFAULT_SPEED);}
 s32  random_int_ranged(s32  min, s32  max)
 {
 s32  range = (max-min);
 ;return ((rand()%range)+min);
+}
+i32  ball_get_round_winner(Ball * ball)
+{
+if (((*ball).x<=0.000000)) 
+{
+return 1;
+}
+
+
+if ((((*ball).x+(*ball).radius)>=1024)) 
+{
+return 0;
+}
+
+
+return (-1);
 }
 int  crank_mainpoint_entry(int  argc, std::string  argv[])
 {
@@ -241,18 +265,63 @@ f32  dt = GetFrameTime();
 }
 );draw_ui((&game_state));draw_paddle((&game_state.paddles[0]));draw_paddle((&game_state.paddles[1]));draw_ball((&game_state.ball));{
 Paddle * paddle_target = (&game_state.paddles[0]);
-;if ((IsKeyDown((i32)Key::KEY_DOWN)||IsKeyDown((i32)Key::KEY_S))) 
+;if (IsKeyDown((i32)Key::KEY_S)) 
 {
 ((*paddle_target).y+=(dt*PONG_PADDLE_SPEED));}
 
 
-if ((IsKeyDown((i32)Key::KEY_UP)||IsKeyDown((i32)Key::KEY_W))) 
+if (IsKeyDown((i32)Key::KEY_W)) 
 {
 ((*paddle_target).y-=(dt*PONG_PADDLE_SPEED));}
 
 
 }
-clamp_paddle_position((&game_state.paddles[0]));clamp_paddle_position((&game_state.paddles[1]));EndDrawing();}
+{
+Paddle * paddle_target = (&game_state.paddles[1]);
+;if (IsKeyDown((i32)Key::KEY_DOWN)) 
+{
+((*paddle_target).y+=(dt*PONG_PADDLE_SPEED));}
+
+
+if (IsKeyDown((i32)Key::KEY_UP)) 
+{
+((*paddle_target).y-=(dt*PONG_PADDLE_SPEED));}
+
+
+}
+clamp_paddle_position((&game_state.paddles[0]));clamp_paddle_position((&game_state.paddles[1]));{
+Ball * ball = (&game_state.ball);
+;{
+((*ball).x+=((dt*(*ball).speed)*(*ball).direction.x));((*ball).y+=((dt*(*ball).speed)*(*ball).direction.y));}
+{
+if ((paddle_intersect_ball((&game_state.paddles[0]), ball)||paddle_intersect_ball((&game_state.paddles[1]), ball))) 
+{
+printf("Ball hit something\n");if (((*ball).speed<=BALL_MAX_SPEED)) 
+{
+((*ball).speed+=15);}
+
+ else {
+((*ball).speed=BALL_MAX_SPEED);}
+
+((*ball).direction.x*=(-1));((*ball).direction.y=(random_int_ranged((-10), 10)/10.000000));((*ball).direction=vec2_normalize((*ball).direction));}
+
+
+if ((((*ball).y<=(0||((*ball).y+(*ball).radius)))>=768)) 
+{
+((*ball).direction.y*=(-1));}
+
+
+}
+{
+int  scorer = ball_get_round_winner(ball);
+;if ((scorer!=(-1))) 
+{
+reset_ball_position((&game_state));(game_state.scores[scorer]+=1);((*ball).direction.x=random_int_ranged((-1), 1));((*ball).direction.y=(random_int_ranged((-10), 10)/10.000000));((*ball).direction=vec2_normalize((*ball).direction));}
+
+
+}
+}
+EndDrawing();}
 
 CloseWindow();return 0;
 }
