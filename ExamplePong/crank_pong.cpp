@@ -57,8 +57,28 @@ void  srand(u32  seed);}; // end extern "C"
 extern "C" {
 int  rand();}; // end extern "C" 
 
+struct AudioStream { // struct name
+void * buffer;
+void * processor;
+uint  sampleRate;
+uint  sampleSize;
+uint  channels;
+};;
+struct Sound { // struct name
+AudioStream  stream;
+uint  frameCount;
+};;
+extern "C" {
+void  PlaySound(Sound  sound);}; // end extern "C" 
+
+extern "C" {
+Sound  LoadSound(char * where);}; // end extern "C" 
+
 extern "C" {
 void  InitWindow(int  width, int  height, char * title);}; // end extern "C" 
+
+extern "C" {
+void  InitAudioDevice();}; // end extern "C" 
 
 extern "C" {
 bool  WindowShouldClose();}; // end extern "C" 
@@ -255,7 +275,8 @@ int  crank_mainpoint_entry(int  argc, std::string  argv[])
 {
 GameState  game_state;
 ;(game_state.scores[0]=0);(game_state.scores[1]=0);(game_state.paddles[0].side=(u8)PaddleSide::Left);(game_state.paddles[0].w=(game_state.paddles[1].w=30));(game_state.paddles[0].h=(game_state.paddles[1].h=60));int  PONG_PADDLE_MARGIN = 45;
-;(game_state.paddles[0].x=(0+PONG_PADDLE_MARGIN));(game_state.paddles[1].x=(1024-(game_state.paddles[1].w+PONG_PADDLE_MARGIN)));(game_state.paddles[1].side=(u8)PaddleSide::Right);(game_state.paddles[1].y=(game_state.paddles[0].y=((768/2)-(game_state.paddles[0].h/2))));InitWindow(1024, 768, "Hello Cranky Pong!");SetTargetFPS(60);reset_ball_position((&game_state));srand(time(0));while (((!game_state.quit)&&(!WindowShouldClose()))) 
+;(game_state.paddles[0].x=(0+PONG_PADDLE_MARGIN));(game_state.paddles[1].x=(1024-(game_state.paddles[1].w+PONG_PADDLE_MARGIN)));(game_state.paddles[1].side=(u8)PaddleSide::Right);(game_state.paddles[1].y=(game_state.paddles[0].y=((768/2)-(game_state.paddles[0].h/2))));InitWindow(1024, 768, "Hello Cranky Pong!");InitAudioDevice();SetTargetFPS(60);reset_ball_position((&game_state));srand(time(0));Sound  hit_sound = LoadSound("assets/beep.wav");
+;while (((!game_state.quit)&&(!WindowShouldClose()))) 
 {
 f32  dt = GetFrameTime();
 ;if (IsKeyPressed((i32)Key::KEY_Q)) 
@@ -296,19 +317,19 @@ Ball * ball = (&game_state.ball);
 {
 if ((paddle_intersect_ball((&game_state.paddles[0]), ball)||paddle_intersect_ball((&game_state.paddles[1]), ball))) 
 {
-printf("Ball hit something\n");if (((*ball).speed<=BALL_MAX_SPEED)) 
+if (((*ball).speed<=BALL_MAX_SPEED)) 
 {
 ((*ball).speed+=15);}
 
  else {
 ((*ball).speed=BALL_MAX_SPEED);}
 
-((*ball).direction.x*=(-1));((*ball).direction.y=(random_int_ranged((-10), 10)/10.000000));((*ball).direction=vec2_normalize((*ball).direction));}
+((*ball).direction.x*=(-1));((*ball).direction.y=(random_int_ranged((-10), 10)/10.000000));((*ball).direction=vec2_normalize((*ball).direction));PlaySound(hit_sound);}
 
 
-if ((((*ball).y<=(0||((*ball).y+(*ball).radius)))>=768)) 
+if ((((*ball).y<=0)||(((*ball).y+(*ball).radius)>=768))) 
 {
-((*ball).direction.y*=(-1));}
+((*ball).direction.y*=(-1));PlaySound(hit_sound);}
 
 
 }
@@ -316,7 +337,7 @@ if ((((*ball).y<=(0||((*ball).y+(*ball).radius)))>=768))
 int  scorer = ball_get_round_winner(ball);
 ;if ((scorer!=(-1))) 
 {
-reset_ball_position((&game_state));(game_state.scores[scorer]+=1);((*ball).direction.x=random_int_ranged((-1), 1));((*ball).direction.y=(random_int_ranged((-10), 10)/10.000000));((*ball).direction=vec2_normalize((*ball).direction));}
+reset_ball_position((&game_state));(game_state.scores[scorer]+=1);((*ball).direction.x=random_int_ranged((-1), 1));((*ball).direction.y=(random_int_ranged((-10), 10)/10.000000));((*ball).direction=vec2_normalize((*ball).direction));PlaySound(hit_sound);}
 
 
 }

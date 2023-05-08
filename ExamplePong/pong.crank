@@ -37,8 +37,11 @@ typedef AudioStream: struct {
 
 typedef Sound: struct {
         stream: AudioStream;
+        frameCount: uint;
 };
 
+PlaySound: extern void(sound: Sound);
+LoadSound: extern Sound(where: char*);
 InitWindow: extern void(width: int, height: int, title: char*);
 InitAudioDevice: extern void();
 WindowShouldClose: extern bool();
@@ -337,6 +340,8 @@ main: int(argc: int, argv: strlit[]) {
 
       srand(time(0));
 
+      hit_sound: Sound = LoadSound("assets/beep.wav");
+
       while !game_state.quit && !WindowShouldClose() {
             dt: f32 = GetFrameTime();
 
@@ -390,7 +395,6 @@ main: int(argc: int, argv: strlit[]) {
                         paddle_intersect_ball(&game_state.paddles[0], ball) ||
                         paddle_intersect_ball(&game_state.paddles[1], ball)
                     {
-                       printf("Ball hit something\n");
                        if ball.speed <= BALL_MAX_SPEED {
                           ball.speed += 15;
                        } else {
@@ -400,10 +404,12 @@ main: int(argc: int, argv: strlit[]) {
                        ball.direction.x *= -1;
                        ball.direction.y = random_int_ranged(-10, 10) / 10.0;
                        ball.direction = vec2_normalize(ball.direction);
+                       PlaySound(hit_sound);
                     }
 
                     if (ball.y <= 0) || ((ball.y + ball.radius) >= 768) {
                        ball.direction.y *= -1;
+                       PlaySound(hit_sound);
                     }
                 }
 
@@ -416,6 +422,7 @@ main: int(argc: int, argv: strlit[]) {
                        ball.direction.x = random_int_ranged(-1, 1);
                        ball.direction.y = random_int_ranged(-10, 10) / 10.0;
                        ball.direction = vec2_normalize(ball.direction);
+                       PlaySound(hit_sound);
                     }
                 }
             }
