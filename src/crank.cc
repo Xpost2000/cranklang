@@ -490,6 +490,7 @@ struct Crank_Module {
     std::string module_name; // usually just the file name. Can be overriden? No sub modules.
     std::vector<Crank_Module*> imports;
     std::vector<Crank_Declaration> decls;
+    std::vector<std::string> directly_included; // additional crank file names
 
     // hack
     bool has_main = false;
@@ -2295,10 +2296,7 @@ Error<Crank_Declaration> parse_variable_decl(Tokenizer_State& tokenizer) {
 #include "debug_print.cc"
 #include "crank_parsing_tests.cc"
 
-Error<Crank_Module> load_module_from_source(std::string module_name, std::string_view source_code) {
-    Crank_Module module;
-    module.module_name = module_name;
-
+bool read_into_module_from_source(Crank_Module& module, std::string_view source_code) {
     Tokenizer_State tokenizer(source_code);
 
     while (!tokenizer.finished()) {
@@ -2310,7 +2308,45 @@ Error<Crank_Module> load_module_from_source(std::string module_name, std::string
         switch (first_token.type) {
             case TOKEN_COMMENT: tokenizer.read_next(); continue; // ignore
             case TOKEN_SYMBOL: {
-                if (first_token.string == "typedef") {
+                if (first_token.string == "include") {
+                    // this is a "directive" to include files directly
+                    // if I have an import, it's not the same because this will not
+                    // make a new module space.
+                    // Crank isn't adding nested modules, so this helps divide files into multiple
+                    // pieces
+                    // modeling itself after the C translation unit system.
+                    tokenizer.read_next();
+                    auto filename = tokenizer.read_next();
+                    assert(filename.type == TOKEN_STRING &&& "include file should be a string literal!");
+                    std::string filename_string = std::string(filename.string) + ".crank";
+
+                    bool already_exists = false;
+                    for (auto& filename : module.directly_included) {
+                        if (filename == filename_string) {
+                            already_exists = true;
+                            break;
+                        }
+                    }
+
+                    if (!already_exists) {
+                        File_Buffer buffer = File_Buffer(filename_string.c_str());
+
+                        if (buffer.data == nullptr) {
+                            printf("No file named \"%s\"! Cannot compile!\n", filename_string.c_str());
+                            return false;
+                        }
+
+                        if (!read_into_module_from_source(module, buffer.data)) {
+                            printf("Failed to read crank file named: \"%s\"\n", filename_string.c_str() );
+                            return false;
+                        }
+                    } else {
+                        printf("Cannot double include the same file into a module!");
+                        return false;
+                    }
+
+                    module.directly_included.push_back(filename_string);
+                } else if (first_token.string == "typedef") {
                     tokenizer.read_next();
                     auto new_typedef = parse_typedef(tokenizer);
                     if (!new_typedef.good) {
@@ -2344,13 +2380,23 @@ Error<Crank_Module> load_module_from_source(std::string module_name, std::string
             default: {
                 /* TODO better error message? */
                 _debugprintf("What did I read?: %.*s\n", unwrap_string_view(Token_Type_string_table[first_token.type]));
-                return Error<Crank_Module>::fail(
-                    "Not a valid declaration start!"
-                );
+                return false;
             } break;
         }
     }
 
+    return true;
+}
+
+Error<Crank_Module> load_module_from_source(std::string module_name, std::string_view source_code) {
+    Crank_Module module = {};
+    module.module_name = module_name;
+
+    if (!read_into_module_from_source(module, source_code)) {
+        return Error<Crank_Module>::fail(
+            "Error found while trying to parse module!"
+        );
+    }
     return Error<Crank_Module>::okay(module);
 }
 
