@@ -27,7 +27,20 @@ time: extern u64(ptr: void*);
 srand: extern void(seed: u32);
 rand: extern int();
 
+typedef AudioStream: struct {
+        buffer: void*;
+        processor: void*;
+        sampleRate: uint;
+        sampleSize: uint;
+        channels: uint;
+};
+
+typedef Sound: struct {
+        stream: AudioStream;
+};
+
 InitWindow: extern void(width: int, height: int, title: char*);
+InitAudioDevice: extern void();
 WindowShouldClose: extern bool();
 SetTargetFPS: extern void(fps: int);
 IsKeyPressed: extern bool(key: int);
@@ -317,6 +330,7 @@ main: int(argc: int, argv: strlit[]) {
       game_state.paddles[1].y = game_state.paddles[0].y = 768/2 - game_state.paddles[0].h/2;
 
       InitWindow(1024, 768, "Hello Cranky Pong!");
+      InitAudioDevice();
       SetTargetFPS(60);
 
       reset_ball_position(&game_state);
