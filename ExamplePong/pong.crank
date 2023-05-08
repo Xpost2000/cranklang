@@ -21,6 +21,12 @@ typedef Color: struct {
 };
 
 // RAYLIB START
+printf: extern int(txt: char*, ...);
+sqrtf: extern f32(v: f32);
+time: extern u64(ptr: void*);
+srand: extern void(seed: u32);
+rand: extern int();
+
 InitWindow: extern void(width: int, height: int, title: char*);
 WindowShouldClose: extern bool();
 SetTargetFPS: extern void(fps: int);
@@ -177,6 +183,31 @@ typedef Vec2: struct {
         y: f32 = 0;
 };
 
+vec2: Vec2(x: f32, y: f32) {
+      // Whoops, forgot to take into account the
+      // case where you have symbols in the initializer.
+      // need to make that allowed in the compiler later, but
+      // it's not a deal breaker.
+      return Vec2: {x: x, y: y};
+};
+
+vec2_length_sq: f32(a: Vec2) {
+    return (a.x*a.x + a.y*a.y);
+};
+
+vec2_length: f32(a: Vec2) {
+    return sqrtf(vec2_length_sq(a));
+};
+
+vec2_normalize: Vec2(a: Vec2) {
+    length: f32 = vec2_length(a);
+    result: Vec2 = Vec2: { 0, 0 };
+
+    result.x = a.x / length;
+    result.y = a.y / length;
+    return result;
+};
+
 typedef Ball: struct {
         x: f32 = 0;
         y: f32 = 0;
@@ -185,7 +216,6 @@ typedef Ball: struct {
         direction: Vec2 = Vec2: {1, 0};
 };
 
-printf: extern int(txt: char*, ...);
 
 typedef GameState: struct {
         // arrays cannot be default init as of this moment lol
@@ -242,6 +272,12 @@ reset_ball_position: void(state: GameState*) {
     ball: Ball* = &state.ball;
     state.ball.x = 512 + state.ball.radius/2;
     state.ball.y = 384 + state.ball.radius/2;
+
+};
+
+random_int_ranged: s32(min: s32, max: s32) {
+    range: s32 = max - min;
+    return (rand() % range) + min;
 };
 
 main: int(argc: int, argv: strlit[]) {
@@ -265,6 +301,8 @@ main: int(argc: int, argv: strlit[]) {
       SetTargetFPS(60);
 
       reset_ball_position(&game_state);
+
+      srand(time(0));
 
       while !game_state.quit && !WindowShouldClose() {
             dt: f32 = GetFrameTime();

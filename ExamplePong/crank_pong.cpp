@@ -43,6 +43,21 @@ u8  b = 0;
 u8  a = 255;
 };;
 extern "C" {
+int  printf(char * txt,...);}; // end extern "C" 
+
+extern "C" {
+f32  sqrtf(f32  v);}; // end extern "C" 
+
+extern "C" {
+u64  time(void * ptr);}; // end extern "C" 
+
+extern "C" {
+void  srand(u32  seed);}; // end extern "C" 
+
+extern "C" {
+int  rand();}; // end extern "C" 
+
+extern "C" {
 void  InitWindow(int  width, int  height, char * title);}; // end extern "C" 
 
 extern "C" {
@@ -108,6 +123,10 @@ struct Vec2 { // struct name
 f32  x = 0;
 f32  y = 0;
 };;
+Vec2  vec2(f32  x, f32  y);
+f32  vec2_length_sq(Vec2  a);
+f32  vec2_length(Vec2  a);
+Vec2  vec2_normalize(Vec2  a);
 struct Ball { // struct name
 f32  x = 0;
 f32  y = 0;
@@ -117,9 +136,6 @@ Vec2  direction = {
 1,0,}
 ;
 };;
-extern "C" {
-int  printf(char * txt,...);}; // end extern "C" 
-
 struct GameState { // struct name
 Paddle  paddles[2];
 Ball  ball;
@@ -135,7 +151,30 @@ void  draw_paddle(Paddle * paddle);
 void  draw_ball(Ball * ball);
 void  clamp_paddle_position(Paddle * paddle);
 void  reset_ball_position(GameState * state);
+s32  random_int_ranged(s32  min, s32  max);
 int  crank_mainpoint_entry(int  argc, std::string  argv[]);
+Vec2  vec2(f32  x, f32  y)
+{
+return {
+x: x,y: y,}
+;
+}
+f32  vec2_length_sq(Vec2  a)
+{
+return ((a.x*a.x)+(a.y*a.y));
+}
+f32  vec2_length(Vec2  a)
+{
+return sqrtf(vec2_length_sq(a));
+}
+Vec2  vec2_normalize(Vec2  a)
+{
+f32  length = vec2_length(a);
+;Vec2  result = {
+0,0,}
+;
+;(result.x=(a.x/length));(result.y=(a.y/length));return result;
+}
 void  draw_ui(GameState * state)
 {
 DrawText(TextFormat("Player 1: %d", (*state).scores[0]), PADDING_X, PADDING_Y, DEFAULT_FONT_SIZE, {
@@ -183,11 +222,16 @@ void  reset_ball_position(GameState * state)
 {
 Ball * ball = (&(*state).ball);
 ;((*state).ball.x=(512+((*state).ball.radius/2)));((*state).ball.y=(384+((*state).ball.radius/2)));}
+s32  random_int_ranged(s32  min, s32  max)
+{
+s32  range = (max-min);
+;return ((rand()%range)+min);
+}
 int  crank_mainpoint_entry(int  argc, std::string  argv[])
 {
 GameState  game_state;
 ;(game_state.scores[0]=0);(game_state.scores[1]=0);(game_state.paddles[0].side=(u8)PaddleSide::Left);(game_state.paddles[0].w=(game_state.paddles[1].w=30));(game_state.paddles[0].h=(game_state.paddles[1].h=60));int  PONG_PADDLE_MARGIN = 45;
-;(game_state.paddles[0].x=(0+PONG_PADDLE_MARGIN));(game_state.paddles[1].x=(1024-(game_state.paddles[1].w+PONG_PADDLE_MARGIN)));(game_state.paddles[1].side=(u8)PaddleSide::Right);(game_state.paddles[1].y=(game_state.paddles[0].y=((768/2)-(game_state.paddles[0].h/2))));InitWindow(1024, 768, "Hello Cranky Pong!");SetTargetFPS(60);reset_ball_position((&game_state));while (((!game_state.quit)&&(!WindowShouldClose()))) 
+;(game_state.paddles[0].x=(0+PONG_PADDLE_MARGIN));(game_state.paddles[1].x=(1024-(game_state.paddles[1].w+PONG_PADDLE_MARGIN)));(game_state.paddles[1].side=(u8)PaddleSide::Right);(game_state.paddles[1].y=(game_state.paddles[0].y=((768/2)-(game_state.paddles[0].h/2))));InitWindow(1024, 768, "Hello Cranky Pong!");SetTargetFPS(60);reset_ball_position((&game_state));srand(time(0));while (((!game_state.quit)&&(!WindowShouldClose()))) 
 {
 f32  dt = GetFrameTime();
 ;if (IsKeyPressed((i32)Key::KEY_Q)) 
